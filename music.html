@@ -308,179 +308,93 @@
     </style>
 </head>
 <body>
-    <!-- shared audio (outside #app so SPA replacement won't remove it) -->
-    <audio id="sharedAudio" loop>
+    <!-- Back button -->
+    <button class="back-btn" onclick="goBack()">←</button>
+
+    <!-- Floating notes container -->
+    <div class="floating-notes" id="floatingNotes"></div>
+
+    <!-- Music player -->
+    <div class="player-container">
+        <div class="album-art" id="albumArt">🎵</div>
+        
+        <div class="song-title">Vienna</div>
+        <div class="song-artist">A Special Song For You</div>
+
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar">
+                <div class="progress" id="progress"></div>
+            </div>
+            <div class="time-display">
+                <span id="currentTime">0:00</span>
+                <span id="duration">0:00</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="rewind()">⏮</button>
+            <button class="control-btn play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+            <button class="control-btn" onclick="forward()">⏭</button>
+        </div>
+
+        <div class="volume-container">
+            <span class="volume-icon">🔈</span>
+            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="1">
+            <span class="volume-icon">🔊</span>
+        </div>
+
+        <div class="visualizer" id="visualizer"></div>
+    </div>
+
+    <!-- Audio element -->
+    <audio id="audio" loop>
         <source src="audio/vienna.mp3" type="audio/mpeg">
     </audio>
 
-    <!-- app wrapper -->
-    <div id="app">
-        <!-- Back button -->
-        <button class="back-btn" onclick="navigateTo('next-page.html')">←</button>
-
-        <!-- Floating notes container -->
-        <div class="floating-notes" id="floatingNotes"></div>
-
-        <!-- Music player -->
-        <div class="player-container">
-            <div class="album-art" id="albumArt">🎵</div>
-            
-            <div class="song-title">Vienna</div>
-            <div class="song-artist">A Special Song For You</div>
-
-            <div class="progress-container">
-                <div class="progress-bar" id="progressBar">
-                    <div class="progress" id="progress"></div>
-                </div>
-                <div class="time-display">
-                    <span id="currentTime">0:00</span>
-                    <span id="duration">0:00</span>
-                </div>
-            </div>
-
-            <div class="controls">
-                <button class="control-btn" onclick="rewind()">⏮</button>
-                <button class="control-btn play-btn" id="playBtn" onclick="togglePlay()">▶</button>
-                <button class="control-btn" onclick="forward()">⏭</button>
-            </div>
-
-            <div class="volume-container">
-                <span class="volume-icon">🔈</span>
-                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="1">
-                <span class="volume-icon">🔊</span>
-            </div>
-
-            <div class="visualizer" id="visualizer"></div>
-        </div>
-    </div>
-
     <script>
-        // --- Shared audio + UI wiring for the music page ---
-        const audio = document.getElementById('sharedAudio');
-        const playBtnDefault = () => document.getElementById('playBtn');
-        const albumArtDefault = () => document.getElementById('albumArt');
-        const progressDefault = () => document.getElementById('progress');
-        const progressBarDefault = () => document.getElementById('progressBar');
-        const currentTimeElDefault = () => document.getElementById('currentTime');
-        const durationElDefault = () => document.getElementById('duration');
-        const volumeSliderDefault = () => document.getElementById('volumeSlider');
-        const visualizerDefault = () => document.getElementById('visualizer');
-        const floatingNotesDefault = () => document.getElementById('floatingNotes');
+        // --- Shared communication / background player support ---
+        const urlParams = new URLSearchParams(location.search);
+        const isBackgroundWindow = urlParams.has('bg') || urlParams.get('bg') === '1';
+        // Shared channel for same-origin communication (main page <-> background player)
+        const channelSupported = 'BroadcastChannel' in window;
+        const channel = channelSupported ? new BroadcastChannel('music_channel') : null;
 
-        // Create visualizer bars (only if element exists)
-        function createVizBars() {
-            const visualizer = visualizerDefault();
-            if (!visualizer) return;
-            visualizer.innerHTML = '';
-            for (let i = 0; i < 20; i++) {
-                const bar = document.createElement('div');
-                bar.className = 'viz-bar';
-                bar.style.height = '5px';
-                visualizer.appendChild(bar);
-            }
+        const audio = document.getElementById('audio');
+        const playBtn = document.getElementById('playBtn');
+        const albumArt = document.getElementById('albumArt');
+        const progress = document.getElementById('progress');
+        const progressBar = document.getElementById('progressBar');
+        const currentTimeEl = document.getElementById('currentTime');
+        const durationEl = document.getElementById('duration');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const visualizer = document.getElementById('visualizer');
+        const floatingNotes = document.getElementById('floatingNotes');
+
+        // Create visualizer bars
+        for (let i = 0; i < 20; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'viz-bar';
+            bar.style.height = '5px';
+            visualizer.appendChild(bar);
         }
-        createVizBars();
+        const vizBars = document.querySelectorAll('.viz-bar');
 
-        let vizInterval;
-        let notesInterval;
-
-        // Load saved state
-        function initMusicUI() {
-            const playBtn = playBtnDefault();
-            const albumArt = albumArtDefault();
-            const progress = progressDefault();
-            const progressBar = progressBarDefault();
-            const currentTimeEl = currentTimeElDefault();
-            const durationEl = durationElDefault();
-            const volumeSlider = volumeSliderDefault();
-            const visualizer = visualizerDefault();
-            const floatingNotes = floatingNotesDefault();
-            const vizBars = document.querySelectorAll('.viz-bar');
-
-            // restore volume if saved
-            const savedVolume = localStorage.getItem('musicVolume');
-            if (savedVolume !== null) {
-                audio.volume = parseFloat(savedVolume);
-                if (volumeSlider) volumeSlider.value = savedVolume;
-            }
-
-            const musicPlaying = localStorage.getItem('musicPlaying');
-            const musicTime = localStorage.getItem('musicTime');
-
-            if (musicTime) {
-                try { audio.currentTime = parseFloat(musicTime); } catch(e) {}
-            }
-
-            if (musicPlaying === 'true') {
-                audio.play().then(() => {
-                    if (playBtn) playBtn.textContent = '⏸';
-                    if (albumArt) albumArt.classList.add('playing');
-                    startVisualizer();
-                    startFloatingNotes();
-                }).catch(() => {});
-            }
-
-            // Event listeners (make sure element exists)
-            if (progressBar) {
-                progressBar.addEventListener('click', (e) => {
-                    const rect = progressBar.getBoundingClientRect();
-                    const percent = (e.clientX - rect.left) / rect.width;
-                    if (audio.duration) audio.currentTime = percent * audio.duration;
-                });
-            }
-
-            if (volumeSlider) {
-                volumeSlider.addEventListener('input', (e) => {
-                    audio.volume = e.target.value;
-                    localStorage.setItem('musicVolume', audio.volume);
-                });
-            }
-
-            // timeupdate
-            audio.addEventListener('timeupdate', () => {
-                if (!audio.duration || !progress) return;
-                const percent = (audio.currentTime / audio.duration) * 100;
-                progress.style.width = percent + '%';
-                if (currentTimeEl) currentTimeEl.textContent = formatTime(audio.currentTime);
-                localStorage.setItem('musicTime', audio.currentTime);
-            });
-
-            audio.addEventListener('loadedmetadata', () => {
-                if (durationEl && audio.duration) durationEl.textContent = formatTime(audio.duration);
-            });
-        }
-
-        // Play/Pause toggle
-        function togglePlay() {
-            const playBtn = playBtnDefault();
-            const albumArt = albumArtDefault();
-            if (audio.paused) {
-                audio.play();
-                if (playBtn) playBtn.textContent = '⏸';
-                if (albumArt) albumArt.classList.add('playing');
-                localStorage.setItem('musicPlaying', 'true');
+        // Utility to set UI playing/paused
+        function setUIPlaying(isPlaying) {
+            if (isPlaying) {
+                playBtn.textContent = '⏸';
+                albumArt.classList.add('playing');
                 startVisualizer();
                 startFloatingNotes();
             } else {
-                audio.pause();
-                if (playBtn) playBtn.textContent = '▶';
-                if (albumArt) albumArt.classList.remove('playing');
-                localStorage.setItem('musicPlaying', 'false');
+                playBtn.textContent = '▶';
+                albumArt.classList.remove('playing');
                 stopVisualizer();
                 stopFloatingNotes();
             }
         }
 
-        // Rewind and Forward
-        function rewind() {
-            audio.currentTime = Math.max(0, audio.currentTime - 10);
-        }
-
-        function forward() {
-            audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + 10);
-        }
-
-        // Format time
+        // Update duration & current time text
         function formatTime(seconds) {
             if (isNaN(seconds)) return '0:00';
             const mins = Math.floor(seconds / 60);
@@ -488,10 +402,10 @@
             return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
-        // Visualizer functions
+        // Visualizer
+        let vizInterval;
         function startVisualizer() {
-            stopVisualizer();
-            const vizBars = document.querySelectorAll('.viz-bar');
+            if (vizInterval) return;
             vizInterval = setInterval(() => {
                 vizBars.forEach(bar => {
                     const height = Math.random() * 35 + 5;
@@ -499,18 +413,16 @@
                 });
             }, 100);
         }
-
         function stopVisualizer() {
             clearInterval(vizInterval);
-            const vizBars = document.querySelectorAll('.viz-bar');
+            vizInterval = null;
             vizBars.forEach(bar => bar.style.height = '5px');
         }
 
         // Floating notes
+        let notesInterval;
         function startFloatingNotes() {
-            stopFloatingNotes();
-            const floatingNotes = floatingNotesDefault();
-            if (!floatingNotes) return;
+            if (notesInterval) return;
             const notes = ['🎵', '🎶', '♪', '♫', '💚'];
             notesInterval = setInterval(() => {
                 const note = document.createElement('div');
@@ -523,98 +435,393 @@
                 setTimeout(() => note.remove(), 4000);
             }, 500);
         }
-
         function stopFloatingNotes() {
             clearInterval(notesInterval);
+            notesInterval = null;
         }
 
-        // Save state before leaving
+        // --- Background player logic (runs inside the popup opened by main page) ---
+        function setupMediaSession() {
+            if ('mediaSession' in navigator) {
+                try {
+                    navigator.mediaSession.metadata = new MediaMetadata({
+                        title: document.querySelector('.song-title').textContent || 'Unknown',
+                        artist: document.querySelector('.song-artist').textContent || '',
+                        // No artwork needed; browsers can still show controls
+                    });
+                    navigator.mediaSession.setActionHandler('play', () => { audio.play(); broadcastState(); });
+                    navigator.mediaSession.setActionHandler('pause', () => { audio.pause(); broadcastState(); });
+                    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+                        audio.currentTime = Math.max(0, audio.currentTime - (details.seekOffset || 10));
+                        broadcastTime();
+                    });
+                    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+                        audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + (details.seekOffset || 10));
+                        broadcastTime();
+                    });
+                    navigator.mediaSession.setActionHandler('seekto', (details) => {
+                        if (details.fastSeek && 'fastSeek' in audio) {
+                            audio.fastSeek(details.seekTime);
+                        } else {
+                            audio.currentTime = details.seekTime;
+                        }
+                        broadcastTime();
+                    });
+                } catch (e) {
+                    // some browsers may throw if they don't support parts
+                }
+            }
+        }
+
+        // Broadcast helpers (to keep main page synced)
+        function broadcastState() {
+            if (channel) channel.postMessage({ action: 'state', playing: !audio.paused, time: audio.currentTime });
+            localStorage.setItem('musicPlaying', (!audio.paused).toString());
+            localStorage.setItem('musicTime', audio.currentTime);
+        }
+        function broadcastTime() {
+            if (channel) channel.postMessage({ action: 'time', time: audio.currentTime });
+            localStorage.setItem('musicTime', audio.currentTime);
+        }
+
+        if (isBackgroundWindow) {
+            // Mark background window open
+            localStorage.setItem('bgWindowOpen', 'true');
+            // If there is stored time, start from it
+            const storedTime = parseFloat(localStorage.getItem('musicTime') || '0');
+            if (!isNaN(storedTime) && storedTime > 0) {
+                audio.currentTime = storedTime;
+            }
+
+            // Start playing if previously expected to be playing
+            window.addEventListener('load', () => {
+                setupMediaSession();
+                const shouldPlay = localStorage.getItem('musicPlaying') === 'true';
+                if (shouldPlay) {
+                    // try to play (user interaction already occurred in previous window)
+                    audio.play().then(() => {
+                        setUIPlaying(true);
+                    }).catch(() => {
+                        // autoplay might be blocked — show paused UI
+                        setUIPlaying(false);
+                    });
+                } else {
+                    setUIPlaying(false);
+                }
+            });
+
+            // Keep updating UI for time/progress
+            audio.addEventListener('timeupdate', () => {
+                if (!isFinite(audio.duration)) return;
+                const percent = (audio.currentTime / audio.duration) * 100;
+                progress.style.width = percent + '%';
+                currentTimeEl.textContent = formatTime(audio.currentTime);
+                durationEl.textContent = formatTime(audio.duration || 0);
+                broadcastTime();
+            });
+
+            audio.addEventListener('loadedmetadata', () => {
+                durationEl.textContent = formatTime(audio.duration || 0);
+            });
+
+            audio.addEventListener('play', () => setUIPlaying(true));
+            audio.addEventListener('pause', () => setUIPlaying(false));
+
+            // React to messages from main page
+            if (channel) {
+                channel.addEventListener('message', (ev) => {
+                    const msg = ev.data || {};
+                    if (!msg.action) return;
+                    if (msg.action === 'play') {
+                        if (typeof msg.time === 'number') audio.currentTime = msg.time;
+                        audio.play().catch(()=>{});
+                    } else if (msg.action === 'pause') {
+                        audio.pause();
+                    } else if (msg.action === 'seek') {
+                        if (typeof msg.time === 'number') audio.currentTime = msg.time;
+                    } else if (msg.action === 'requestState') {
+                        // reply so main page can sync UI
+                        channel.postMessage({ action: 'state', playing: !audio.paused, time: audio.currentTime });
+                    }
+                });
+            }
+
+            // Save time when leaving background window
+            window.addEventListener('beforeunload', () => {
+                localStorage.setItem('musicTime', audio.currentTime);
+                localStorage.setItem('musicPlaying', (!audio.paused).toString());
+                localStorage.setItem('bgWindowOpen', 'false');
+            });
+
+            // Also expose some UI-level handlers in this background page's DOM (so user can pause/focus)
+            // (existing DOM elements will work normally)
+        } else {
+            // Normal main page (not background popup) — we should not actually play audio here if background player exists.
+            // Load saved state and sync UI.
+            window.addEventListener('load', () => {
+                const storedTime = parseFloat(localStorage.getItem('musicTime') || '0');
+                if (!isNaN(storedTime) && storedTime > 0) {
+                    audio.currentTime = storedTime;
+                }
+                const playing = localStorage.getItem('musicPlaying') === 'true';
+                const bgOpen = localStorage.getItem('bgWindowOpen') === 'true';
+
+                // If background is open and playing, reflect that in UI but DO NOT play locally.
+                if (bgOpen && playing) {
+                    setUIPlaying(true);
+                } else if (playing && !bgOpen) {
+                    // No background window but saved playing -> start background window automatically when user presses play
+                    setUIPlaying(false);
+                } else {
+                    setUIPlaying(false);
+                }
+
+                // Listen for updates from background window
+                if (channel) {
+                    channel.addEventListener('message', (ev) => {
+                        const msg = ev.data || {};
+                        if (!msg.action) return;
+                        if (msg.action === 'state' || msg.action === 'time') {
+                            // update UI to reflect true playing state and time
+                            if (typeof msg.playing === 'boolean') setUIPlaying(msg.playing);
+                            if (typeof msg.time === 'number') {
+                                currentTimeEl.textContent = formatTime(msg.time);
+                                // update progress width if duration known
+                                if (audio.duration && isFinite(audio.duration)) {
+                                    const pct = (msg.time / audio.duration) * 100;
+                                    progress.style.width = pct + '%';
+                                } else {
+                                    // best effort: set width to 0..100 if we don't know duration
+                                    progress.style.width = '0%';
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+
+            // If user clicks progress in main page, ask background to seek (or if no bg open, seek local audio)
+            progressBar.addEventListener('click', (e) => {
+                const rect = progressBar.getBoundingClientRect();
+                const percent = (e.clientX - rect.left) / rect.width;
+                const targetTime = percent * (audio.duration || 0);
+                const bgOpen = localStorage.getItem('bgWindowOpen') === 'true';
+                if (bgOpen && channel) {
+                    channel.postMessage({ action: 'seek', time: targetTime });
+                } else {
+                    audio.currentTime = targetTime;
+                }
+            });
+        }
+
+        // --- Play/Pause toggle (main entry point on UI) ---
+        // When user toggles play on the main page, open / reuse a background player window (same file with ?bg=1)
+        let bgWindowRef = null; // this reference only survives while this page is open; re-opening uses named window
+        function togglePlay() {
+            const bgOpen = localStorage.getItem('bgWindowOpen') === 'true';
+            // If we're the background window, just control local audio
+            if (isBackgroundWindow) {
+                if (audio.paused) {
+                    audio.play().then(() => {
+                        broadcastState();
+                    }).catch(()=>{});
+                } else {
+                    audio.pause();
+                    broadcastState();
+                }
+                return;
+            }
+
+            // If background player is already open, just send play/pause command
+            if (bgOpen && channel) {
+                // Request current state first to toggle appropriately
+                // We'll optimistically toggle: if UI shows paused, send play; if playing, send pause.
+                const currentlyShowsPlaying = playBtn.textContent === '⏸';
+                if (currentlyShowsPlaying) {
+                    channel.postMessage({ action: 'pause' });
+                    setUIPlaying(false);
+                    localStorage.setItem('musicPlaying', 'false');
+                } else {
+                    // send "play" with desired time
+                    const desiredTime = parseFloat(localStorage.getItem('musicTime') || '0');
+                    channel.postMessage({ action: 'play', time: desiredTime });
+                    setUIPlaying(true);
+                    localStorage.setItem('musicPlaying', 'true');
+                }
+                return;
+            }
+
+            // Otherwise, open a background player window (user gesture -> browser should allow popup)
+            // Use a consistent window name so future window.open reuses it
+            try {
+                const w = window.open(window.location.pathname + '?bg=1', 'bgMusicPlayer', 'width=360,height=640');
+                bgWindowRef = w;
+                // Give the new window a moment to load and then tell it to play from stored time
+                setTimeout(() => {
+                    const desiredTime = parseFloat(localStorage.getItem('musicTime') || audio.currentTime || 0);
+                    if (channel) {
+                        channel.postMessage({ action: 'play', time: desiredTime });
+                    } else if (w && !w.closed) {
+                        // In case BroadcastChannel isn't supported, try sending via postMessage
+                        try { w.postMessage({ action: 'play', time: desiredTime }, location.origin); } catch(e){}
+                    }
+                    localStorage.setItem('bgWindowOpen', 'true');
+                    localStorage.setItem('musicPlaying', 'true');
+                    setUIPlaying(true);
+                }, 500);
+            } catch (e) {
+                // Popup likely blocked — fallback: attempt to play locally (may be blocked by autoplay rules)
+                audio.play().then(() => {
+                    setUIPlaying(true);
+                    localStorage.setItem('musicPlaying', 'true');
+                }).catch(() => {
+                    // couldn't autoplay — leave UI paused
+                    setUIPlaying(false);
+                });
+            }
+        }
+
+        // Rewind and Forward
+        function rewind() {
+            const bgOpen = localStorage.getItem('bgWindowOpen') === 'true';
+            if (bgOpen && channel) {
+                channel.postMessage({ action: 'seek', time: Math.max(0, (parseFloat(localStorage.getItem('musicTime') || '0') - 10)) });
+            } else {
+                audio.currentTime = Math.max(0, audio.currentTime - 10);
+            }
+        }
+
+        function forward() {
+            const bgOpen = localStorage.getItem('bgWindowOpen') === 'true';
+            const dur = audio.duration || 0;
+            if (bgOpen && channel) {
+                channel.postMessage({ action: 'seek', time: Math.min(dur, (parseFloat(localStorage.getItem('musicTime') || '0') + 10)) });
+            } else {
+                audio.currentTime = Math.min(dur, audio.currentTime + 10);
+            }
+        }
+
+        // Volume control
+        volumeSlider.addEventListener('input', (e) => {
+            const vol = parseFloat(e.target.value);
+            audio.volume = vol;
+            // If background player is open, inform it
+            if (localStorage.getItem('bgWindowOpen') === 'true' && channel) {
+                channel.postMessage({ action: 'volume', volume: vol });
+            }
+            localStorage.setItem('musicVolume', vol.toString());
+        });
+
+        // Sync volume on load
+        window.addEventListener('load', () => {
+            const vol = parseFloat(localStorage.getItem('musicVolume') || '1');
+            volumeSlider.value = vol;
+            audio.volume = vol;
+        });
+
+        // If BroadcastChannel present, react to time/volume/state updates in main page (non-background)
+        if (!isBackgroundWindow && channel) {
+            channel.addEventListener('message', (ev) => {
+                const msg = ev.data || {};
+                if (msg.action === 'time') {
+                    // update displayed time
+                    if (typeof msg.time === 'number') {
+                        currentTimeEl.textContent = formatTime(msg.time);
+                        localStorage.setItem('musicTime', msg.time.toString());
+                    }
+                } else if (msg.action === 'state') {
+                    // sync UI
+                    if (typeof msg.playing === 'boolean') setUIPlaying(msg.playing);
+                    if (typeof msg.time === 'number') currentTimeEl.textContent = formatTime(msg.time);
+                } else if (msg.action === 'volume') {
+                    if (typeof msg.volume === 'number') {
+                        volumeSlider.value = msg.volume;
+                        localStorage.setItem('musicVolume', msg.volume.toString());
+                    }
+                }
+            });
+        }
+
+        // Background page should also handle messages from main if BroadcastChannel not supported (fallback)
+        window.addEventListener('message', (ev) => {
+            // accept only same-origin if possible
+            try {
+                if (ev.origin !== location.origin) return;
+            } catch (e) {}
+            const msg = ev.data || {};
+            if (!msg.action) return;
+            if (isBackgroundWindow) {
+                if (msg.action === 'play') {
+                    if (typeof msg.time === 'number') audio.currentTime = msg.time;
+                    audio.play().catch(()=>{});
+                } else if (msg.action === 'pause') {
+                    audio.pause();
+                } else if (msg.action === 'seek' && typeof msg.time === 'number') {
+                    audio.currentTime = msg.time;
+                } else if (msg.action === 'volume' && typeof msg.volume === 'number') {
+                    audio.volume = msg.volume;
+                }
+            }
+        });
+
+        // Update local storage time regularly (so main page can read it if needed)
+        setInterval(() => {
+            if (isBackgroundWindow) {
+                localStorage.setItem('musicTime', audio.currentTime.toString());
+                localStorage.setItem('musicPlaying', (!audio.paused).toString());
+            }
+        }, 1000);
+
+        // Audio element events common to both normal and background windows
+        audio.addEventListener('loadedmetadata', () => {
+            durationEl.textContent = formatTime(audio.duration || 0);
+        });
+
+        audio.addEventListener('timeupdate', () => {
+            // Only the page that actually plays should control progress UI. Both pages may show time based on stored values.
+            if (isBackgroundWindow) {
+                if (audio.duration && isFinite(audio.duration)) {
+                    const percent = (audio.currentTime / audio.duration) * 100;
+                    progress.style.width = percent + '%';
+                }
+                currentTimeEl.textContent = formatTime(audio.currentTime);
+                durationEl.textContent = formatTime(audio.duration || 0);
+            }
+            localStorage.setItem('musicTime', audio.currentTime);
+        });
+
+        // When user clicks Go Back — store state and navigate
+        function goBack() {
+            // keep the music playing — just navigate away
+            localStorage.setItem('musicTime', audio.currentTime);
+            if (!audio.paused) {
+                localStorage.setItem('musicPlaying', 'true');
+            } else {
+                localStorage.setItem('musicPlaying', 'false');
+            }
+            // navigate
+            window.location.href = 'next-page.html';
+        }
+
+        // Clean up when page unloads
         window.addEventListener('beforeunload', () => {
             localStorage.setItem('musicTime', audio.currentTime);
-            localStorage.setItem('musicPlaying', (!audio.paused).toString());
-        });
-
-        // Initialize when content is ready
-        window.addEventListener('load', () => {
-            initMusicUI();
-        });
-    </script>
-
-    <!-- SPA loader & navigation helper (keeps audio element persistent) -->
-    <script>
-        async function fetchAndReplace(url, push = true) {
-            try {
-                const res = await fetch(url, {cache: "no-store"});
-                const text = await res.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(text, 'text/html');
-
-                // set title
-                if (doc.title) document.title = doc.title;
-
-                // find #app in fetched doc
-                const newApp = doc.getElementById('app');
-                const currentApp = document.getElementById('app');
-                if (newApp && currentApp) {
-                    currentApp.innerHTML = newApp.innerHTML;
-                } else {
-                    // fallback: replace body content (but keep #sharedAudio)
-                    const sharedAudio = document.getElementById('sharedAudio');
-                    document.body.innerHTML = '';
-                    if (sharedAudio) document.body.appendChild(sharedAudio);
-                    document.body.insertAdjacentHTML('beforeend', text);
-                }
-
-                // run scripts inside the fetched #app
-                const scripts = newApp ? newApp.querySelectorAll('script') : doc.querySelectorAll('script');
-                for (const s of scripts) {
-                    const script = document.createElement('script');
-                    if (s.src) {
-                        script.src = s.src;
-                        // preserve async/defer if present
-                        if (s.async) script.async = true;
-                        if (s.defer) script.defer = true;
-                    } else {
-                        script.textContent = s.textContent;
-                    }
-                    document.body.appendChild(script);
-                    // remove to avoid duplicates on future navigations
-                    script.remove();
-                }
-
-                // initialize music UI after replacing
-                if (typeof initMusicUI === 'function') initMusicUI();
-
-                // update history
-                if (push) history.pushState({url}, '', url);
-            } catch (err) {
-                console.error('Navigation error', err);
-                // fallback to full navigation
-                window.location.href = url;
+            // If this is the background window, mark it closed
+            if (isBackgroundWindow) {
+                localStorage.setItem('bgWindowOpen', 'false');
+                localStorage.setItem('musicPlaying', (!audio.paused).toString());
             }
-        }
-
-        function navigateTo(page) {
-            // save music state
-            const sharedAudio = document.getElementById('sharedAudio');
-            if (sharedAudio) {
-                localStorage.setItem('musicTime', sharedAudio.currentTime);
-                localStorage.setItem('musicPlaying', (!sharedAudio.paused).toString());
-            }
-            // fade effect
-            document.body.style.opacity = '0';
-            document.body.style.transition = 'opacity 0.25s';
-            setTimeout(async () => {
-                await fetchAndReplace(page, true);
-                document.body.style.opacity = '1';
-            }, 200);
-        }
-
-        // handle browser back/forward
-        window.addEventListener('popstate', (ev) => {
-            const url = (ev.state && ev.state.url) || location.pathname;
-            fetchAndReplace(url, false);
         });
+
+        // If background window: listen for volume/seek commands
+        if (isBackgroundWindow && channel) {
+            channel.addEventListener('message', (ev) => {
+                const msg = ev.data || {};
+                if (msg.action === 'volume' && typeof msg.volume === 'number') {
+                    audio.volume = msg.volume;
+                }
+            });
+        }
     </script>
 </body>
 </html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Background Player</title>
+<style>
+/* keep minimal appearance; if opened visibly the user can control playback here */
+body{font-family:Arial,Helvetica,sans-serif;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;padding:16px}
+.controls{display:flex;gap:12px;align-items:center}
+button{padding:10px 14px;border-radius:8px;border:1px solid #ccc;background:#f7f7f7;cursor:pointer}
+small{color:#666;margin-top:8px}
+</style>
+</head>
+<body>
+  <div>
+    <div style="font-size:18px;font-weight:600">Vienna — A Special Song For You</div>
+    <div class="controls" style="margin-top:12px">
+      <button id="playPause">Play</button>
+      <button id="rew">⏮</button>
+      <button id="fwd">⏭</button>
+      <input id="vol" type="range" min="0" max="1" step="0.01" value="1" style="width:120px">
+    </div>
+    <small>Close this tab to stop playback. Use system media controls to play/pause as well.</small>
+  </div>
+
+  <!-- actual audio element lives here -->
+  <audio id="bgAudio" loop>
+    <source src="audio/vienna.mp3" type="audio/mpeg">
+  </audio>
+
+<script>
+const urlParams = new URLSearchParams(location.search);
+const isEmbed = urlParams.has('embed');
+const audio = document.getElementById('bgAudio');
+const playBtn = document.getElementById('playPause');
+const volSlider = document.getElementById('vol');
+
+const channelSupported = 'BroadcastChannel' in window;
+const channel = channelSupported ? new BroadcastChannel('music_channel') : null;
+
+function formatTime(sec){ if (!isFinite(sec)||isNaN(sec)) return '0:00'; const m=Math.floor(sec/60), s=Math.floor(sec%60); return `${m}:${s.toString().padStart(2,'0')}`; }
+
+function broadcastState(){
+  const duration = audio.duration || 0;
+  const time = audio.currentTime || 0;
+  const pct = duration ? (time/duration) : 0;
+  const msg = { action:'state', playing: !audio.paused, time, duration, progressPercent: pct };
+  if (channel) channel.postMessage(msg);
+  else {
+    // fallback: postMessage to opener or parent if available
+    try { if (window.opener && !window.opener.closed) window.opener.postMessage(msg, location.origin); } catch(e){}
+    try { if (window.parent && window.parent !== window) window.parent.postMessage(msg, location.origin); } catch(e){}
+  }
+  // also persist to localStorage for main page
+  try {
+    localStorage.setItem('musicPlaying', (!audio.paused).toString());
+    localStorage.setItem('musicTime', audio.currentTime.toString());
+    localStorage.setItem('musicDuration', formatTime(duration));
+    localStorage.setItem('musicVolume', audio.volume.toString());
+    localStorage.setItem('bgWindowOpen','true');
+  } catch(e){}
+}
+
+// Media Session API (improves OS/media notification controls)
+if ('mediaSession' in navigator) {
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: 'Vienna',
+      artist: 'A Special Song For You'
+    });
+    navigator.mediaSession.setActionHandler('play', ()=>{ audio.play().catch(()=>{}); });
+    navigator.mediaSession.setActionHandler('pause', ()=>{ audio.pause(); });
+    navigator.mediaSession.setActionHandler('seekbackward', ()=>{ audio.currentTime=Math.max(0,audio.currentTime-10); });
+    navigator.mediaSession.setActionHandler('seekforward', ()=>{ audio.currentTime=Math.min(audio.duration||Infinity,audio.currentTime+10); });
+    navigator.mediaSession.setActionHandler('seekto', (details)=>{ if (details.fastSeek && 'fastSeek' in audio) audio.fastSeek(details.seekTime); else audio.currentTime = details.seekTime; });
+  } catch(e){}
+}
+
+// When messages arrive (from main page)
+function handleMessage(msg){
+  if (!msg || !msg.action) return;
+  if (msg.action === 'play') {
+    if (typeof msg.time === 'number') audio.currentTime = msg.time;
+    // attempt to play
+    audio.play().catch(()=>{ /* user gesture required maybe */ });
+  } else if (msg.action === 'pause') {
+    audio.pause();
+  } else if (msg.action === 'seek') {
+    if (typeof msg.time === 'number') audio.currentTime = msg.time;
+  } else if (msg.action === 'seekPercent') {
+    // compute time from percent if duration known
+    if (typeof msg.percent === 'number' && isFinite(audio.duration) && audio.duration>0){
+      audio.currentTime = Math.max(0, Math.min(audio.duration, msg.percent * audio.duration));
+    }
+  } else if (msg.action === 'volume') {
+    if (typeof msg.volume === 'number') audio.volume = msg.volume;
+  } else if (msg.action === 'requestState') {
+    broadcastState();
+  }
+}
+
+// BroadcastChannel listener fallback to postMessage
+if (channel) {
+  channel.addEventListener('message', (ev)=> handleMessage(ev.data || {}));
+} else {
+  window.addEventListener('message', (ev)=>{
+    try { if (ev.origin !== location.origin) return; } catch(e){}
+    handleMessage(ev.data || {});
+  });
+}
+
+// UI controls (if user opened the background page)
+playBtn.addEventListener('click', ()=>{
+  if (audio.paused) audio.play().catch(()=>{});
+  else audio.pause();
+});
+document.getElementById('rew').addEventListener('click', ()=> audio.currentTime = Math.max(0, audio.currentTime - 10));
+document.getElementById('fwd').addEventListener('click', ()=> audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + 10));
+volSlider.addEventListener('input', (e)=> { audio.volume = parseFloat(e.target.value); if (channel) channel.postMessage({action:'volume', volume: audio.volume}); localStorage.setItem('musicVolume', audio.volume.toString()); });
+
+// Keep main page in sync regularly
+audio.addEventListener('timeupdate', broadcastState);
+audio.addEventListener('play', broadcastState);
+audio.addEventListener('pause', broadcastState);
+audio.addEventListener('loadedmetadata', broadcastState);
+
+// On load: if localStorage says we should be playing, try to play (user must have triggered gesture previously)
+window.addEventListener('load', ()=>{
+  try {
+    const shouldPlay = localStorage.getItem('musicPlaying') === 'true';
+    const storedTime = parseFloat(localStorage.getItem('musicTime') || '0') || 0;
+    const storedVol = parseFloat(localStorage.getItem('musicVolume') || '1');
+    audio.volume = storedVol;
+    volSlider.value = storedVol;
+    if (!isNaN(storedTime) && storedTime>0) audio.currentTime = storedTime;
+    if (shouldPlay) audio.play().catch(()=>{/* can't autoplay without gesture */});
+    // one-time state broadcast
+    setTimeout(()=> broadcastState(), 400);
+  } catch(e){}
+});
+
+// when closing this tab, mark bgWindowOpen false
+window.addEventListener('beforeunload', ()=> {
+  try { localStorage.setItem('bgWindowOpen','false'); localStorage.setItem('musicPlaying', (!audio.paused).toString()); } catch(e){}
+});
+</script>
+</body>
+</html>

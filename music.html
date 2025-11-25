@@ -308,131 +308,168 @@
     </style>
 </head>
 <body>
-    <!-- Back button -->
-    <button class="back-btn" onclick="goBack()">←</button>
-
-    <!-- Floating notes container -->
-    <div class="floating-notes" id="floatingNotes"></div>
-
-    <!-- Music player -->
-    <div class="player-container">
-        <div class="album-art" id="albumArt">🎵</div>
-        
-        <div class="song-title">Vienna</div>
-        <div class="song-artist">A Special Song For You</div>
-
-        <div class="progress-container">
-            <div class="progress-bar" id="progressBar">
-                <div class="progress" id="progress"></div>
-            </div>
-            <div class="time-display">
-                <span id="currentTime">0:00</span>
-                <span id="duration">0:00</span>
-            </div>
-        </div>
-
-        <div class="controls">
-            <button class="control-btn" onclick="rewind()">⏮</button>
-            <button class="control-btn play-btn" id="playBtn" onclick="togglePlay()">▶</button>
-            <button class="control-btn" onclick="forward()">⏭</button>
-        </div>
-
-        <div class="volume-container">
-            <span class="volume-icon">🔈</span>
-            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="1">
-            <span class="volume-icon">🔊</span>
-        </div>
-
-        <div class="visualizer" id="visualizer"></div>
-    </div>
-
-    <!-- Audio element -->
-    <audio id="audio" loop>
+    <!-- shared audio (outside #app so SPA replacement won't remove it) -->
+    <audio id="sharedAudio" loop>
         <source src="audio/vienna.mp3" type="audio/mpeg">
     </audio>
 
-    <script>
-        const audio = document.getElementById('audio');
-        const playBtn = document.getElementById('playBtn');
-        const albumArt = document.getElementById('albumArt');
-        const progress = document.getElementById('progress');
-        const progressBar = document.getElementById('progressBar');
-        const currentTimeEl = document.getElementById('currentTime');
-        const durationEl = document.getElementById('duration');
-        const volumeSlider = document.getElementById('volumeSlider');
-        const visualizer = document.getElementById('visualizer');
-        const floatingNotes = document.getElementById('floatingNotes');
+    <!-- app wrapper -->
+    <div id="app">
+        <!-- Back button -->
+        <button class="back-btn" onclick="navigateTo('next-page.html')">←</button>
 
-        // Create visualizer bars
-        for (let i = 0; i < 20; i++) {
-            const bar = document.createElement('div');
-            bar.className = 'viz-bar';
-            bar.style.height = '5px';
-            visualizer.appendChild(bar);
+        <!-- Floating notes container -->
+        <div class="floating-notes" id="floatingNotes"></div>
+
+        <!-- Music player -->
+        <div class="player-container">
+            <div class="album-art" id="albumArt">🎵</div>
+            
+            <div class="song-title">Vienna</div>
+            <div class="song-artist">A Special Song For You</div>
+
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress" id="progress"></div>
+                </div>
+                <div class="time-display">
+                    <span id="currentTime">0:00</span>
+                    <span id="duration">0:00</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="control-btn" onclick="rewind()">⏮</button>
+                <button class="control-btn play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+                <button class="control-btn" onclick="forward()">⏭</button>
+            </div>
+
+            <div class="volume-container">
+                <span class="volume-icon">🔈</span>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="1">
+                <span class="volume-icon">🔊</span>
+            </div>
+
+            <div class="visualizer" id="visualizer"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Shared audio + UI wiring for the music page ---
+        const audio = document.getElementById('sharedAudio');
+        const playBtnDefault = () => document.getElementById('playBtn');
+        const albumArtDefault = () => document.getElementById('albumArt');
+        const progressDefault = () => document.getElementById('progress');
+        const progressBarDefault = () => document.getElementById('progressBar');
+        const currentTimeElDefault = () => document.getElementById('currentTime');
+        const durationElDefault = () => document.getElementById('duration');
+        const volumeSliderDefault = () => document.getElementById('volumeSlider');
+        const visualizerDefault = () => document.getElementById('visualizer');
+        const floatingNotesDefault = () => document.getElementById('floatingNotes');
+
+        // Create visualizer bars (only if element exists)
+        function createVizBars() {
+            const visualizer = visualizerDefault();
+            if (!visualizer) return;
+            visualizer.innerHTML = '';
+            for (let i = 0; i < 20; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'viz-bar';
+                bar.style.height = '5px';
+                visualizer.appendChild(bar);
+            }
         }
-        const vizBars = document.querySelectorAll('.viz-bar');
+        createVizBars();
+
+        let vizInterval;
+        let notesInterval;
 
         // Load saved state
-        window.addEventListener('load', () => {
+        function initMusicUI() {
+            const playBtn = playBtnDefault();
+            const albumArt = albumArtDefault();
+            const progress = progressDefault();
+            const progressBar = progressBarDefault();
+            const currentTimeEl = currentTimeElDefault();
+            const durationEl = durationElDefault();
+            const volumeSlider = volumeSliderDefault();
+            const visualizer = visualizerDefault();
+            const floatingNotes = floatingNotesDefault();
+            const vizBars = document.querySelectorAll('.viz-bar');
+
+            // restore volume if saved
+            const savedVolume = localStorage.getItem('musicVolume');
+            if (savedVolume !== null) {
+                audio.volume = parseFloat(savedVolume);
+                if (volumeSlider) volumeSlider.value = savedVolume;
+            }
+
             const musicPlaying = localStorage.getItem('musicPlaying');
             const musicTime = localStorage.getItem('musicTime');
-            
+
             if (musicTime) {
-                audio.currentTime = parseFloat(musicTime);
+                try { audio.currentTime = parseFloat(musicTime); } catch(e) {}
             }
-            
+
             if (musicPlaying === 'true') {
                 audio.play().then(() => {
-                    playBtn.textContent = '⏸';
-                    albumArt.classList.add('playing');
+                    if (playBtn) playBtn.textContent = '⏸';
+                    if (albumArt) albumArt.classList.add('playing');
                     startVisualizer();
                     startFloatingNotes();
                 }).catch(() => {});
             }
-        });
+
+            // Event listeners (make sure element exists)
+            if (progressBar) {
+                progressBar.addEventListener('click', (e) => {
+                    const rect = progressBar.getBoundingClientRect();
+                    const percent = (e.clientX - rect.left) / rect.width;
+                    if (audio.duration) audio.currentTime = percent * audio.duration;
+                });
+            }
+
+            if (volumeSlider) {
+                volumeSlider.addEventListener('input', (e) => {
+                    audio.volume = e.target.value;
+                    localStorage.setItem('musicVolume', audio.volume);
+                });
+            }
+
+            // timeupdate
+            audio.addEventListener('timeupdate', () => {
+                if (!audio.duration || !progress) return;
+                const percent = (audio.currentTime / audio.duration) * 100;
+                progress.style.width = percent + '%';
+                if (currentTimeEl) currentTimeEl.textContent = formatTime(audio.currentTime);
+                localStorage.setItem('musicTime', audio.currentTime);
+            });
+
+            audio.addEventListener('loadedmetadata', () => {
+                if (durationEl && audio.duration) durationEl.textContent = formatTime(audio.duration);
+            });
+        }
 
         // Play/Pause toggle
         function togglePlay() {
+            const playBtn = playBtnDefault();
+            const albumArt = albumArtDefault();
             if (audio.paused) {
                 audio.play();
-                playBtn.textContent = '⏸';
-                albumArt.classList.add('playing');
+                if (playBtn) playBtn.textContent = '⏸';
+                if (albumArt) albumArt.classList.add('playing');
                 localStorage.setItem('musicPlaying', 'true');
                 startVisualizer();
                 startFloatingNotes();
             } else {
                 audio.pause();
-                playBtn.textContent = '▶';
-                albumArt.classList.remove('playing');
+                if (playBtn) playBtn.textContent = '▶';
+                if (albumArt) albumArt.classList.remove('playing');
                 localStorage.setItem('musicPlaying', 'false');
                 stopVisualizer();
+                stopFloatingNotes();
             }
         }
-
-        // Update progress bar
-        audio.addEventListener('timeupdate', () => {
-            const percent = (audio.currentTime / audio.duration) * 100;
-            progress.style.width = percent + '%';
-            currentTimeEl.textContent = formatTime(audio.currentTime);
-            localStorage.setItem('musicTime', audio.currentTime);
-        });
-
-        // Set duration when loaded
-        audio.addEventListener('loadedmetadata', () => {
-            durationEl.textContent = formatTime(audio.duration);
-        });
-
-        // Click on progress bar
-        progressBar.addEventListener('click', (e) => {
-            const rect = progressBar.getBoundingClientRect();
-            const percent = (e.clientX - rect.left) / rect.width;
-            audio.currentTime = percent * audio.duration;
-        });
-
-        // Volume control
-        volumeSlider.addEventListener('input', (e) => {
-            audio.volume = e.target.value;
-        });
 
         // Rewind and Forward
         function rewind() {
@@ -440,7 +477,7 @@
         }
 
         function forward() {
-            audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
+            audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + 10);
         }
 
         // Format time
@@ -451,9 +488,10 @@
             return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
-        // Visualizer animation
-        let vizInterval;
+        // Visualizer functions
         function startVisualizer() {
+            stopVisualizer();
+            const vizBars = document.querySelectorAll('.viz-bar');
             vizInterval = setInterval(() => {
                 vizBars.forEach(bar => {
                     const height = Math.random() * 35 + 5;
@@ -464,14 +502,15 @@
 
         function stopVisualizer() {
             clearInterval(vizInterval);
-            vizBars.forEach(bar => {
-                bar.style.height = '5px';
-            });
+            const vizBars = document.querySelectorAll('.viz-bar');
+            vizBars.forEach(bar => bar.style.height = '5px');
         }
 
         // Floating notes
-        let notesInterval;
         function startFloatingNotes() {
+            stopFloatingNotes();
+            const floatingNotes = floatingNotesDefault();
+            if (!floatingNotes) return;
             const notes = ['🎵', '🎶', '♪', '♫', '💚'];
             notesInterval = setInterval(() => {
                 const note = document.createElement('div');
@@ -489,20 +528,93 @@
             clearInterval(notesInterval);
         }
 
-        // Go back
-        function goBack() {
-            localStorage.setItem('musicTime', audio.currentTime);
-            if (!audio.paused) {
-                localStorage.setItem('musicPlaying', 'true');
-            }
-            window.location.href = 'next-page.html';
-        }
-
         // Save state before leaving
         window.addEventListener('beforeunload', () => {
             localStorage.setItem('musicTime', audio.currentTime);
+            localStorage.setItem('musicPlaying', (!audio.paused).toString());
+        });
+
+        // Initialize when content is ready
+        window.addEventListener('load', () => {
+            initMusicUI();
+        });
+    </script>
+
+    <!-- SPA loader & navigation helper (keeps audio element persistent) -->
+    <script>
+        async function fetchAndReplace(url, push = true) {
+            try {
+                const res = await fetch(url, {cache: "no-store"});
+                const text = await res.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+
+                // set title
+                if (doc.title) document.title = doc.title;
+
+                // find #app in fetched doc
+                const newApp = doc.getElementById('app');
+                const currentApp = document.getElementById('app');
+                if (newApp && currentApp) {
+                    currentApp.innerHTML = newApp.innerHTML;
+                } else {
+                    // fallback: replace body content (but keep #sharedAudio)
+                    const sharedAudio = document.getElementById('sharedAudio');
+                    document.body.innerHTML = '';
+                    if (sharedAudio) document.body.appendChild(sharedAudio);
+                    document.body.insertAdjacentHTML('beforeend', text);
+                }
+
+                // run scripts inside the fetched #app
+                const scripts = newApp ? newApp.querySelectorAll('script') : doc.querySelectorAll('script');
+                for (const s of scripts) {
+                    const script = document.createElement('script');
+                    if (s.src) {
+                        script.src = s.src;
+                        // preserve async/defer if present
+                        if (s.async) script.async = true;
+                        if (s.defer) script.defer = true;
+                    } else {
+                        script.textContent = s.textContent;
+                    }
+                    document.body.appendChild(script);
+                    // remove to avoid duplicates on future navigations
+                    script.remove();
+                }
+
+                // initialize music UI after replacing
+                if (typeof initMusicUI === 'function') initMusicUI();
+
+                // update history
+                if (push) history.pushState({url}, '', url);
+            } catch (err) {
+                console.error('Navigation error', err);
+                // fallback to full navigation
+                window.location.href = url;
+            }
+        }
+
+        function navigateTo(page) {
+            // save music state
+            const sharedAudio = document.getElementById('sharedAudio');
+            if (sharedAudio) {
+                localStorage.setItem('musicTime', sharedAudio.currentTime);
+                localStorage.setItem('musicPlaying', (!sharedAudio.paused).toString());
+            }
+            // fade effect
+            document.body.style.opacity = '0';
+            document.body.style.transition = 'opacity 0.25s';
+            setTimeout(async () => {
+                await fetchAndReplace(page, true);
+                document.body.style.opacity = '1';
+            }, 200);
+        }
+
+        // handle browser back/forward
+        window.addEventListener('popstate', (ev) => {
+            const url = (ev.state && ev.state.url) || location.pathname;
+            fetchAndReplace(url, false);
         });
     </script>
 </body>
 </html>
-

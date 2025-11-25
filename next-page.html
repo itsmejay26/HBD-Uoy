@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🎁 Your Gifts</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #D4E6C3 0%, #B5D4A3 50%, #9BC484 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            position: relative;
+            padding: 20px;
+        }
+
+        /* Floating particles */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            font-size: 1.5rem;
+            opacity: 0.3;
+            animation: float-particle 20s infinite linear;
+        }
+
+        @keyframes float-particle {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.3;
+            }
+            90% {
+                opacity: 0.3;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Title */
+        .title-container {
+            text-align: center;
+            margin-bottom: 40px;
+            z-index: 10;
+            opacity: 0;
+            transform: translateY(-30px);
+            animation: slideDown 1s 0.5s forwards;
+        }
+
+        @keyframes slideDown {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .title {
+            font-size: 2rem;
+            color: #2D5A27;
+            text-shadow: 0 2px 10px rgba(255,255,255,0.5);
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .title-emoji {
+            font-size: 2.5rem;
+            display: block;
+            margin-bottom: 10px;
+            animation: bounce-emoji 2s infinite;
+        }
+
+        @keyframes bounce-emoji {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Gift boxes container */
+        .boxes-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            z-index: 10;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        /* Individual gift box */
+        .gift-box {
+            background: linear-gradient(145deg, #fff 0%, #f0f7eb 100%);
+            border-radius: 20px;
+            padding: 25px 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            cursor: pointer;
+            box-shadow: 
+                0 10px 30px rgba(45, 90, 39, 0.2),
+                0 5px 15px rgba(0,0,0,0.1),
+                inset 0 -3px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            opacity: 0;
+            transform: translateX(-50px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gift-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .gift-box:hover::before {
+            left: 100%;
+        }
+
+        .gift-box:nth-child(1) { animation: slideIn 0.6s 0.8s forwards; }
+        .gift-box:nth-child(2) { animation: slideIn 0.6s 1s forwards; }
+        .gift-box:nth-child(3) { animation: slideIn 0.6s 1.2s forwards; }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .gift-box:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 
+                0 15px 40px rgba(45, 90, 39, 0.3),
+                0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .gift-box:active {
+            transform: scale(0.98);
+        }
+
+        /* Icon container */
+        .icon-container {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .gift-box:nth-child(1) .icon-container {
+            background: linear-gradient(135deg, #A8E6CF 0%, #7BC89C 100%);
+        }
+
+        .gift-box:nth-child(2) .icon-container {
+            background: linear-gradient(135deg, #DDA0DD 0%, #BA55D3 100%);
+        }
+
+        .gift-box:nth-child(3) .icon-container {
+            background: linear-gradient(135deg, #FFB347 0%, #FF8C00 100%);
+        }
+
+        .icon-container::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 15px;
+            animation: pulse-icon 2s infinite;
+        }
+
+        @keyframes pulse-icon {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+        }
+
+        /* Box content */
+        .box-content {
+            flex: 1;
+        }
+
+        .box-title {
+            font-size: 1.2rem;
+            color: #2D5A27;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .box-description {
+            font-size: 0.85rem;
+            color: #5A8F53;
+        }
+
+        /* Arrow */
+        .box-arrow {
+            font-size: 1.5rem;
+            color: #9BC484;
+            transition: transform 0.3s;
+        }
+
+        .gift-box:hover .box-arrow {
+            transform: translateX(5px);
+        }
+
+        /* Decorative elements */
+        .deco-circle {
+            position: fixed;
+            border-radius: 50%;
+            opacity: 0.1;
+            z-index: 0;
+        }
+
+        .deco-circle:nth-child(1) {
+            width: 200px;
+            height: 200px;
+            background: #2D5A27;
+            top: -50px;
+            right: -50px;
+        }
+
+        .deco-circle:nth-child(2) {
+            width: 150px;
+            height: 150px;
+            background: #2D5A27;
+            bottom: -30px;
+            left: -30px;
+        }
+
+        .deco-circle:nth-child(3) {
+            width: 100px;
+            height: 100px;
+            background: #2D5A27;
+            top: 40%;
+            left: -50px;
+        }
+
+        /* Music indicator */
+        .music-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 15px;
+            border-radius: 25px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: #2D5A27;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+            z-index: 100;
+            cursor: pointer;
+        }
+
+        .music-indicator.show {
+            display: flex;
+        }
+
+        .music-bars {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+            height: 15px;
+        }
+
+        .music-bar {
+            width: 3px;
+            background: #7BC89C;
+            border-radius: 2px;
+            animation: music-bar 0.5s infinite alternate;
+        }
+
+        .music-bar:nth-child(1) { height: 5px; animation-delay: 0s; }
+        .music-bar:nth-child(2) { height: 10px; animation-delay: 0.1s; }
+        .music-bar:nth-child(3) { height: 7px; animation-delay: 0.2s; }
+        .music-bar:nth-child(4) { height: 12px; animation-delay: 0.3s; }
+
+        @keyframes music-bar {
+            to { height: 15px; }
+        }
+
+        .music-indicator.paused .music-bar {
+            animation: none;
+            height: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Decorative circles -->
+    <div class="deco-circle"></div>
+    <div class="deco-circle"></div>
+    <div class="deco-circle"></div>
+
+    <!-- Floating particles -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Music indicator -->
+    <div class="music-indicator" id="musicIndicator">
+        <div class="music-bars">
+            <div class="music-bar"></div>
+            <div class="music-bar"></div>
+            <div class="music-bar"></div>
+            <div class="music-bar"></div>
+        </div>
+        <span>Music Playing</span>
+    </div>
+
+    <!-- Title -->
+    <div class="title-container">
+        <span class="title-emoji">🎁✨🎉</span>
+        <h1 class="title">THESE ARE FOR YOU</h1>
+    </div>
+
+    <!-- Gift boxes -->
+    <div class="boxes-container">
+        <div class="gift-box" onclick="navigateTo('music.html')">
+            <div class="icon-container">🎵</div>
+            <div class="box-content">
+                <div class="box-title">Music</div>
+                <div class="box-description">A special song for you</div>
+            </div>
+            <div class="box-arrow">→</div>
+        </div>
+
+        <div class="gift-box" onclick="navigateTo('photobooth.html')">
+            <div class="icon-container">📸</div>
+            <div class="box-content">
+                <div class="box-title">Photobooth</div>
+                <div class="box-description">Take your birthday photo here!</div>
+            </div>
+            <div class="box-arrow">→</div>
+        </div>
+
+        <div class="gift-box" onclick="navigateTo('letter.html')">
+            <div class="icon-container">💌</div>
+            <div class="box-content">
+                <div class="box-title">Letter</div>
+                <div class="box-description">A message letter from us</div>
+            </div>
+            <div class="box-arrow">→</div>
+        </div>
+    </div>
+
+    <!-- Background audio (controlled globally) -->
+    <audio id="bgMusic" loop>
+        <source src="audio/Vienna.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // Create floating particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            const emojis = ['🌿', '🍃', '✨', '💚', '🌸', '🎁', '🎀'];
+            
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+                container.appendChild(particle);
+            }
+        }
+        createParticles();
+
+        // Music control
+        const bgMusic = document.getElementById('bgMusic');
+        const musicIndicator = document.getElementById('musicIndicator');
+
+        // Check if music should be playing (from localStorage)
+        window.addEventListener('load', () => {
+            const musicPlaying = localStorage.getItem('musicPlaying');
+            const musicTime = localStorage.getItem('musicTime');
+            
+            if (musicPlaying === 'true') {
+                bgMusic.currentTime = parseFloat(musicTime) || 0;
+                bgMusic.play().then(() => {
+                    musicIndicator.classList.add('show');
+                }).catch(() => {});
+            }
+        });
+
+        // Save music state before leaving
+        window.addEventListener('beforeunload', () => {
+            if (!bgMusic.paused) {
+                localStorage.setItem('musicTime', bgMusic.currentTime);
+            }
+        });
+
+        // Toggle music on indicator click
+        musicIndicator.addEventListener('click', () => {
+            if (bgMusic.paused) {
+                bgMusic.play();
+                musicIndicator.classList.remove('paused');
+                localStorage.setItem('musicPlaying', 'true');
+            } else {
+                bgMusic.pause();
+                musicIndicator.classList.add('paused');
+                localStorage.setItem('musicPlaying', 'false');
+            }
+        });
+
+        // Navigation with transition
+        function navigateTo(page) {
+            // Save music state
+            if (!bgMusic.paused) {
+                localStorage.setItem('musicTime', bgMusic.currentTime);
+                localStorage.setItem('musicPlaying', 'true');
+            }
+            
+            document.body.style.opacity = '0';
+            document.body.style.transition = 'opacity 0.3s';
+            setTimeout(() => {
+                window.location.href = page;
+            }, 300);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>💌 Special Letters</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #D4E6C3 0%, #B5D4A3 50%, #9BC484 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            position: relative;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* Floating decorations */
+        .floating-deco {
+            position: fixed;
+            font-size: 2rem;
+            opacity: 0.3;
+            z-index: 0;
+            animation: float-deco 6s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes float-deco {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+        }
+
+        .floating-deco:nth-child(1) { top: 8%; left: 5%; animation-delay: 0s; }
+        .floating-deco:nth-child(2) { top: 15%; right: 8%; animation-delay: 1s; }
+        .floating-deco:nth-child(3) { bottom: 15%; left: 8%; animation-delay: 2s; }
+        .floating-deco:nth-child(4) { bottom: 25%; right: 5%; animation-delay: 0.5s; }
+        .floating-deco:nth-child(5) { top: 45%; left: 3%; animation-delay: 1.5s; }
+        .floating-deco:nth-child(6) { top: 55%; right: 3%; animation-delay: 2.5s; }
+
+        /* Back button */
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.95);
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            transition: all 0.3s;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .back-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Music indicator */
+        .music-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 15px;
+            border-radius: 25px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: #2D5A27;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+            z-index: 100;
+            cursor: pointer;
+        }
+
+        .music-indicator.show {
+            display: flex;
+        }
+
+        .music-bars {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+            height: 15px;
+        }
+
+        .music-bar {
+            width: 3px;
+            background: #7BC89C;
+            border-radius: 2px;
+            animation: music-bar 0.5s infinite alternate;
+        }
+
+        .music-bar:nth-child(1) { height: 5px; animation-delay: 0s; }
+        .music-bar:nth-child(2) { height: 10px; animation-delay: 0.1s; }
+        .music-bar:nth-child(3) { height: 7px; animation-delay: 0.2s; }
+        .music-bar:nth-child(4) { height: 12px; animation-delay: 0.3s; }
+
+        @keyframes music-bar {
+            to { height: 15px; }
+        }
+
+        .music-indicator.paused .music-bar {
+            animation: none;
+            height: 5px;
+        }
+
+        /* ==================== GAME SECTION ==================== */
+        .game-section {
+            width: 100%;
+            max-width: 380px;
+            z-index: 10;
+            opacity: 0;
+            animation: fadeInUp 0.8s 0.3s forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .game-section.hidden {
+            display: none;
+        }
+
+        .game-container {
+            background: rgba(255,255,255,0.95);
+            border-radius: 25px;
+            padding: 25px 20px;
+            box-shadow: 0 15px 50px rgba(45, 90, 39, 0.25);
+            text-align: center;
+        }
+
+        .game-header {
+            margin-bottom: 20px;
+        }
+
+        .game-icon {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .game-title {
+            font-size: 1.6rem;
+            color: #2D5A27;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .game-subtitle {
+            color: #7BC89C;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* Game stats */
+        .game-stats {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, #f0f7eb 0%, #e8f5e0 100%);
+            border-radius: 15px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            color: #2D5A27;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #7BC89C;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Card grid */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #7BC89C 0%, #5BA37A 100%);
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            transition: all 0.3s;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(91, 163, 122, 0.3);
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+
+        .card:hover:not(.flipped):not(.matched) {
+            transform: scale(1.08) rotateZ(2deg);
+            box-shadow: 0 8px 25px rgba(91, 163, 122, 0.5);
+        }
+
+        .card:active:not(.flipped):not(.matched) {
+            transform: scale(0.95);
+        }
+
+        .card.flipped {
+            background: #fff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            animation: cardFlip 0.4s ease-out;
+        }
+
+        @keyframes cardFlip {
+            0% { transform: rotateY(0deg) scale(1); }
+            50% { transform: rotateY(90deg) scale(1.1); }
+            100% { transform: rotateY(0deg) scale(1); }
+        }
+
+        .card.matched {
+            background: linear-gradient(135deg, #A8E6CF 0%, #7BC89C 100%);
+            animation: matchedCelebrate 0.7s ease-out;
+            cursor: default;
+            box-shadow: 0 0 20px rgba(123, 200, 156, 0.6);
+        }
+
+        @keyframes matchedCelebrate {
+            0% { transform: scale(1) rotate(0deg); }
+            20% { transform: scale(1.2) rotate(-10deg); }
+            40% { transform: scale(1.2) rotate(10deg); }
+            60% { transform: scale(1.15) rotate(-5deg); }
+            80% { transform: scale(1.1) rotate(5deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        .card.wrong {
+            animation: wrongShake 0.6s ease-out;
+            background: linear-gradient(135deg, #ffcccc 0%, #ff9999 100%);
+        }
+
+        @keyframes wrongShake {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            15% { transform: translateX(-10px) rotate(-5deg); }
+            30% { transform: translateX(10px) rotate(5deg); }
+            45% { transform: translateX(-10px) rotate(-5deg); }
+            60% { transform: translateX(10px) rotate(5deg); }
+            75% { transform: translateX(-5px) rotate(-2deg); }
+            90% { transform: translateX(5px) rotate(2deg); }
+        }
+
+        .card-content {
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-size: 1.8rem;
+        }
+
+        .card.flipped .card-content,
+        .card.matched .card-content {
+            opacity: 1;
+        }
+
+        .card-back {
+            position: absolute;
+            font-size: 1.3rem;
+            opacity: 1;
+            transition: opacity 0.2s;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .card.flipped .card-back,
+        .card.matched .card-back {
+            opacity: 0;
+        }
+
+        /* Reset button */
+        .reset-btn {
+            background: transparent;
+            color: #7BC89C;
+            border: 2px solid #7BC89C;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .reset-btn:hover {
+            background: #7BC89C;
+            color: #fff;
+            transform: scale(1.05);
+        }
+
+        /* ==================== WIN SECTION ==================== */
+        .win-section {
+            display: none;
+            width: 100%;
+            max-width: 380px;
+            z-index: 10;
+        }
+
+        .win-section.show {
+            display: block;
+            animation: winAppear 0.8s ease-out;
+        }
+
+        @keyframes winAppear {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) translateY(50px);
+            }
+            60% {
+                transform: scale(1.05) translateY(-10px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .win-container {
+            background: rgba(255,255,255,0.98);
+            border-radius: 30px;
+            padding: 40px 25px;
+            box-shadow: 0 20px 60px rgba(45, 90, 39, 0.3);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .win-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #7BC89C, #A8E6CF, #7BC89C, #A8E6CF);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite linear;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .win-emoji {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            animation: winBounce 1s infinite;
+        }
+
+        @keyframes winBounce {
+            0%, 100% { transform: translateY(0) scale(1) rotate(-5deg); }
+            25% { transform: translateY(-15px) scale(1.1) rotate(5deg); }
+            50% { transform: translateY(-25px) scale(1.15) rotate(-5deg); }
+            75% { transform: translateY(-15px) scale(1.1) rotate(5deg); }
+        }
+
+        .win-title {
+            font-size: 2rem;
+            color: #2D5A27;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .win-stats {
+            color: #7BC89C;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .win-message {
+            color: #5BA37A;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        .open-letter-btn {
+            background: linear-gradient(135deg, #7BC89C 0%, #5BA37A 100%);
+            color: #fff;
+            border: none;
+            padding: 18px 50px;
+            border-radius: 35px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 35px rgba(91, 163, 122, 0.5);
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .open-letter-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .open-letter-btn:hover::before {
+            left: 100%;
+        }
+
+        .open-letter-btn:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 15px 45px rgba(91, 163, 122, 0.6);
+        }
+
+        .open-letter-btn:active {
+            transform: translateY(-2px) scale(0.98);
+        }
+
+        /* ==================== LETTER SECTION ==================== */
+        .letter-section {
+            display: none;
+            width: 100%;
+            max-width: 400px;
+            z-index: 10;
+            padding: 20px 0 60px 0;
+        }
+
+        .letter-section.show {
+            display: block;
+            animation: letterReveal 1.2s ease-out;
+        }
+
+        @keyframes letterReveal {
+            0% {
+                opacity: 0;
+                transform: scale(0.7) rotateX(30deg) translateY(50px);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.02) rotateX(-5deg) translateY(-10px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotateX(0deg) translateY(0);
+            }
+        }
+
+        /* Letter counter/indicator */
+        .letter-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .letter-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .letter-dot.active {
+            background: #fff;
+            transform: scale(1.3);
+            box-shadow: 0 0 10px rgba(255,255,255,0.8);
+        }
+
+        .letter-dot:hover:not(.active) {
+            background: rgba(255,255,255,0.8);
+            transform: scale(1.1);
+        }
+
+        .letter-counter {
+            background: rgba(255,255,255,0.9);
+            padding: 8px 20px;
+            border-radius: 20px;
+            color: #2D5A27;
+            font-weight: bold;
+            font-size: 0.9rem;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+        }
+
+        .envelope {
+            background: linear-gradient(145deg, #F5E6D3 0%, #E8D4BC 100%);
+            border-radius: 25px;
+            padding: 30px 20px;
+            box-shadow: 
+                0 25px 70px rgba(45, 90, 39, 0.35),
+                inset 0 0 0 4px #D4C4A8,
+                inset 0 -10px 30px rgba(0,0,0,0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .envelope::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: linear-gradient(135deg, #E8D4BC 0%, #D4C4A8 100%);
+            clip-path: polygon(0 0, 50% 80%, 100% 0);
+        }
+
+        .envelope-seal {
+            position: absolute;
+            top: 45px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #7BC89C 0%, #5BA37A 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 
+                0 5px 20px rgba(0,0,0,0.25),
+                inset 0 -3px 10px rgba(0,0,0,0.1);
+            z-index: 5;
+            animation: sealPulse 2s infinite;
+        }
+
+        @keyframes sealPulse {
+            0%, 100% { box-shadow: 0 5px 20px rgba(0,0,0,0.25), 0 0 0 0 rgba(123, 200, 156, 0.4); }
+            50% { box-shadow: 0 5px 20px rgba(0,0,0,0.25), 0 0 0 15px rgba(123, 200, 156, 0); }
+        }
+
+        .letter-paper {
+            background: linear-gradient(180deg, #fff 0%, #fefefe 50%, #f9f9f9 100%);
+            border-radius: 20px;
+            padding: 40px 28px;
+            margin-top: 70px;
+            position: relative;
+            box-shadow: 
+                0 10px 40px rgba(0,0,0,0.12),
+                inset 0 1px 0 rgba(255,255,255,0.8);
+            min-height: 450px;
+        }
+
+        .letter-paper::before {
+            content: '';
+            position: absolute;
+            top: 40px;
+            left: 28px;
+            right: 28px;
+            bottom: 40px;
+            background: repeating-linear-gradient(
+                transparent 0px,
+                transparent 30px,
+                #e8f5e0 30px,
+                #e8f5e0 31px
+            );
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .letter-paper::after {
+            content: '';
+            position: absolute;
+            left: 50px;
+            top: 40px;
+            bottom: 40px;
+            width: 2px;
+            background: linear-gradient(180deg, #ffcccc 0%, #ffaaaa 100%);
+            opacity: 0.5;
+        }
+
+        .letter-header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .letter-date {
+            color: #7BC89C;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .letter-greeting {
+            font-size: 1.8rem;
+            color: #2D5A27;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .letter-body {
+            color: #333;
+            line-height: 2.1;
+            font-size: 1.05rem;
+            position: relative;
+            z-index: 1;
+            text-align: left;
+            padding-left: 30px;
+        }
+
+        .letter-body p {
+            margin-bottom: 25px;
+            text-indent: 0;
+        }
+
+        .letter-body.animate p {
+            opacity: 0;
+            animation: letterTextAppear 0.6s forwards;
+        }
+
+        .letter-body.animate p:nth-child(1) { animation-delay: 0.3s; }
+        .letter-body.animate p:nth-child(2) { animation-delay: 0.6s; }
+        .letter-body.animate p:nth-child(3) { animation-delay: 0.9s; }
+        .letter-body.animate p:nth-child(4) { animation-delay: 1.2s; }
+        .letter-body.animate p:nth-child(5) { animation-delay: 1.5s; }
+
+        @keyframes letterTextAppear {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .highlight {
+            color: #5BA37A;
+            font-weight: 600;
+        }
+
+        .letter-closing {
+            text-align: right;
+            margin-top: 35px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .letter-closing.animate {
+            opacity: 0;
+            animation: letterTextAppear 0.6s 1.8s forwards;
+        }
+
+        .letter-closing .regards {
+            color: #2D5A27;
+            font-style: italic;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .letter-closing .signature {
+            font-size: 1.6rem;
+            color: #5BA37A;
+            font-weight: bold;
+            font-family: 'Georgia', serif;
+        }
+
+        .letter-decoration {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 1.8rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .letter-decoration.animate {
+            opacity: 0;
+            animation: letterTextAppear 0.6s 2.1s forwards;
+        }
+
+        /* Navigation buttons */
+        .letter-navigation {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .nav-btn {
+            background: linear-gradient(135deg, #7BC89C 0%, #5BA37A 100%);
+            color: #fff;
+            border: none;
+            padding: 14px 35px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px 25px rgba(91, 163, 122, 0.4);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 35px rgba(91, 163, 122, 0.5);
+        }
+
+        .nav-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .nav-btn.prev-btn {
+            background: rgba(255,255,255,0.9);
+            color: #5BA37A;
+        }
+
+        .nav-btn.prev-btn:hover {
+            background: #fff;
+        }
+
+        .nav-btn.next-btn {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-btn.next-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: btnShine 2s infinite;
+        }
+
+        @keyframes btnShine {
+            0% { left: -100%; }
+            50%, 100% { left: 100%; }
+        }
+
+        /* Floating hearts */
+        .hearts-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            overflow: hidden;
+        }
+
+        .floating-heart {
+            position: absolute;
+            font-size: 1.5rem;
+            opacity: 0;
+        }
+
+        .floating-heart.rise {
+            animation: heartRise 4s forwards ease-out;
+        }
+
+        @keyframes heartRise {
+            0% {
+                opacity: 0;
+                transform: translateY(0) scale(0) rotate(0deg);
+            }
+            15% {
+                opacity: 0.9;
+                transform: translateY(-15vh) scale(1.2) rotate(15deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100vh) scale(0.5) rotate(-15deg);
+            }
+        }
+
+        /* Confetti celebration */
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 200;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            top: -20px;
+            opacity: 0;
+        }
+
+        .confetti.fall {
+            animation: confettiFall 3.5s forwards ease-out;
+        }
+
+        @keyframes confettiFall {
+            0% {
+                opacity: 1;
+                top: -20px;
+                transform: rotate(0deg) translateX(0) scale(1);
+            }
+            25% {
+                transform: rotate(180deg) translateX(50px) scale(1.1);
+            }
+            50% {
+                transform: rotate(360deg) translateX(-30px) scale(0.9);
+            }
+            75% {
+                transform: rotate(540deg) translateX(40px) scale(1);
+            }
+            100% {
+                opacity: 0;
+                top: 110vh;
+                transform: rotate(720deg) translateX(-20px) scale(0.8);
+            }
+        }
+
+        /* Star burst effect */
+        .star-burst {
+            position: fixed;
+            font-size: 2rem;
+            opacity: 0;
+            z-index: 150;
+            pointer-events: none;
+        }
+
+        .star-burst.burst {
+            animation: starBurst 1s forwards ease-out;
+        }
+
+        @keyframes starBurst {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(0) rotate(0deg);
+            }
+            50% {
+                opacity: 1;
+                transform: translate(var(--tx), var(--ty)) scale(1.5) rotate(180deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(calc(var(--tx) * 2), calc(var(--ty) * 2)) scale(0) rotate(360deg);
+            }
+        }
+
+        /* Page transition animation */
+        .letter-content-wrapper {
+            transition: all 0.5s ease;
+        }
+
+        .letter-content-wrapper.slide-out-left {
+            animation: slideOutLeft 0.4s forwards;
+        }
+
+        .letter-content-wrapper.slide-out-right {
+            animation: slideOutRight 0.4s forwards;
+        }
+
+        .letter-content-wrapper.slide-in-left {
+            animation: slideInLeft 0.4s forwards;
+        }
+
+        .letter-content-wrapper.slide-in-right {
+            animation: slideInRight 0.4s forwards;
+        }
+
+        @keyframes slideOutLeft {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(-50px); }
+        }
+
+        @keyframes slideOutRight {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(50px); }
+        }
+
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(-50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Completion message */
+        .completion-message {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .completion-message.show {
+            display: block;
+            animation: fadeInUp 0.5s;
+        }
+
+        .completion-emoji {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .completion-text {
+            color: #2D5A27;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .completion-subtext {
+            color: #7BC89C;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating decorations -->
+    <div class="floating-deco">💌</div>
+    <div class="floating-deco">💖</div>
+    <div class="floating-deco">✨</div>
+    <div class="floating-deco">🌸</div>
+    <div class="floating-deco">💝</div>
+    <div class="floating-deco">🎀</div>
+
+    <!-- Back button -->
+    <button class="back-btn" onclick="goBack()">←</button>
+
+    <!-- Music indicator -->
+    <div class="music-indicator" id="musicIndicator">
+        <div class="music-bars">
+            <div class="music-bar"></div>
+            <div class="music-bar"></div>
+            <div class="music-bar"></div>
+            <div class="music-bar"></div>
+        </div>
+        <span>Music Playing</span>
+    </div>
+
+    <!-- ==================== GAME SECTION ==================== -->
+    <div class="game-section" id="gameSection">
+        <div class="game-container">
+            <div class="game-header">
+                <div class="game-icon">🃏</div>
+                <h1 class="game-title">Memory Match</h1>
+                <p class="game-subtitle">Match all pairs to unlock your special letters! 💌</p>
+            </div>
+
+            <div class="game-stats">
+                <div class="stat">
+                    <div class="stat-value" id="moves">0</div>
+                    <div class="stat-label">Moves</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="pairs">0/6</div>
+                    <div class="stat-label">Pairs</div>
+                </div>
+            </div>
+
+            <div class="card-grid" id="cardGrid"></div>
+
+            <button class="reset-btn" onclick="resetGame()">🔄 Reset Game</button>
+        </div>
+    </div>
+
+    <!-- ==================== WIN SECTION ==================== -->
+    <div class="win-section" id="winSection">
+        <div class="win-container">
+            <div class="win-emoji">🎉</div>
+            <h2 class="win-title">Congratulations!</h2>
+            <p class="win-stats">You completed it in <span id="finalMoves">0</span> moves!</p>
+            <p class="win-message">You've unlocked your special letters! 💌<br>Are you ready to read them?</p>
+            <button class="open-letter-btn" onclick="openLetter()">
+                <span>💌</span> Open Letters
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== LETTER SECTION ==================== -->
+    <div class="letter-section" id="letterSection">
+        <!-- Letter indicator -->
+        <div class="letter-indicator">
+            <div class="letter-counter" id="letterCounter">Letter 1 of 3</div>
+        </div>
+        <div class="letter-indicator" id="letterDots"></div>
+
+        <div class="letter-content-wrapper" id="letterContentWrapper">
+            <div class="envelope">
+                <div class="envelope-seal" id="envelopeSeal">💝</div>
+                
+                <div class="letter-paper">
+                    <div class="letter-header">
+                        <div class="letter-date" id="letterDate"></div>
+                        <div class="letter-greeting" id="letterGreeting">My Dearest Friend,</div>
+                    </div>
+
+                    <div class="letter-body animate" id="letterBody">
+                        <!-- Letter content will be inserted here -->
+                    </div>
+
+                    <div class="letter-closing animate" id="letterClosing">
+                        <div class="regards" id="letterRegards">With all my love,</div>
+                        <div class="signature" id="letterSignature">Your Friend 💕</div>
+                    </div>
+
+                    <div class="letter-decoration animate" id="letterDecoration">
+                        🎂 🎈 🎁 🎉 🎊 🌸 💐
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation buttons -->
+        <div class="letter-navigation">
+            <button class="nav-btn prev-btn" id="prevBtn" onclick="prevLetter()">
+                <span>←</span> Previous
+            </button>
+            <button class="nav-btn next-btn" id="nextBtn" onclick="nextLetter()">
+                Next <span>→</span>
+            </button>
+        </div>
+
+        <!-- Completion message -->
+        <div class="completion-message" id="completionMessage">
+            <div class="completion-emoji">💖✨💖</div>
+            <div class="completion-text">You've read all the letters!</div>
+            <div class="completion-subtext">Hope they made you smile! 🌟</div>
+        </div>
+    </div>
+
+    <!-- Hearts container -->
+    <div class="hearts-container" id="heartsContainer"></div>
+
+    <!-- Confetti container -->
+    <div class="confetti-container" id="confettiContainer"></div>
+
+    <!-- Background music -->
+    <audio id="bgMusic" loop>
+        <source src="audio/Vienna.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // ==================== LETTERS DATA ====================
+        // You can add or remove letters here!
+        const letters = [
+            {
+                seal: "💝",
+                greeting: "My Bff,",
+                body: `
+                    <p>Happy Birthday te, I want to say thankyou coz you understand me, even though di pa tayo ganon mag kakilala, but for me parang ang tagal nanating magkakilala HAHAHA pero sana mas makilala pa kita. I'm grateful to met u of course, and you're not ashamed to vent out to me and if you have a problems or struggle don't be shy to rants pa rin samin or sakin I'm just here if wala kang malalapitan. Support ako if ano yung mga gusto mo sa buhay kung ano yung pathway ng life mo someday, if you know for yourself that your decision is right, go lang, I also know that you will achieve what you wish for. May mga kaya ka pang di mo pa nakikita sa sarili mo, try to explore it, and I hope a lot more opportunities will happen to you for goods in your life, don't pressure yourself, I believe you can do it someday. love u te so much</p>
+                    `,
+                
+                signature: "Feyttt💕",
+                decoration: "🎂 🎈 🎁 🎉 🎊 🌸 💐"
+            },
+            
+            {
+                seal: "💝",
+                greeting: "To Uoy,",
+                body: `
+                    <p>wala pa HAHAHAHAHAHAHAAHA</p>
+                    `,
+                
+                signature: "Jayyy 💗",
+                decoration: "🎂 🍰 🎁 💝 🌺 🎊 💖"
+            }
+            // Add more letters here following the same format!
+        ];
+
+        // ==================== VARIABLES ====================
+        const cardEmojis = ['🎂', '🎁', '🎈', '🎉', '💖', '🌟'];
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let moves = 0;
+        let canFlip = true;
+        let currentLetterIndex = 0;
+        let heartsInterval = null;
+
+        const bgMusic = document.getElementById('bgMusic');
+        const musicIndicator = document.getElementById('musicIndicator');
+
+        // ==================== INITIALIZATION ====================
+        window.addEventListener('load', () => {
+            // Initialize music
+            const musicPlaying = localStorage.getItem('musicPlaying');
+            const musicTime = localStorage.getItem('musicTime');
+            
+            if (musicPlaying === 'true') {
+                bgMusic.currentTime = parseFloat(musicTime) || 0;
+                bgMusic.play().then(() => {
+                    musicIndicator.classList.add('show');
+                }).catch(() => {});
+            }
+
+            // Initialize game
+            initGame();
+            
+            // Create letter dots
+            createLetterDots();
+        });
+
+        // Music indicator click
+        musicIndicator.addEventListener('click', () => {
+            if (bgMusic.paused) {
+                bgMusic.play();
+                musicIndicator.classList.remove('paused');
+                localStorage.setItem('musicPlaying', 'true');
+            } else {
+                bgMusic.pause();
+                musicIndicator.classList.add('paused');
+                localStorage.setItem('musicPlaying', 'false');
+            }
+        });
+
+        // Save music time periodically
+        setInterval(() => {
+            if (!bgMusic.paused) {
+                localStorage.setItem('musicTime', bgMusic.currentTime);
+            }
+        }, 1000);
+
+        // ==================== GAME FUNCTIONS ====================
+        function initGame() {
+            const cardGrid = document.getElementById('cardGrid');
+            cardGrid.innerHTML = '';
+            
+            cards = [...cardEmojis, ...cardEmojis];
+            cards = shuffleArray(cards);
+            
+            cards.forEach((emoji, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.index = index;
+                card.dataset.emoji = emoji;
+                
+                card.innerHTML = `
+                    <span class="card-back">❓</span>
+                    <span class="card-content">${emoji}</span>
+                `;
+                
+                card.addEventListener('click', () => flipCard(card));
+                cardGrid.appendChild(card);
+                
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.5) rotateY(180deg)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.4s ease-out';
+                    card.style.opacity = '1';
+                    card.style.transform = 'scale(1) rotateY(0deg)';
+                }, index * 50);
+            });
+
+            matchedPairs = 0;
+            moves = 0;
+            flippedCards = [];
+            canFlip = true;
+            updateStats();
+        }
+
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        function flipCard(card) {
+            if (!canFlip) return;
+            if (card.classList.contains('flipped')) return;
+            if (card.classList.contains('matched')) return;
+            if (flippedCards.length >= 2) return;
+
+            card.classList.add('flipped');
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                moves++;
+                updateStats();
+                canFlip = false;
+
+                const [card1, card2] = flippedCards;
+                
+                if (card1.dataset.emoji === card2.dataset.emoji) {
+                    setTimeout(() => {
+                        card1.classList.add('matched');
+                        card2.classList.add('matched');
+                        card1.classList.remove('flipped');
+                        card2.classList.remove('flipped');
+                        
+                        matchedPairs++;
+                        updateStats();
+                        flippedCards = [];
+                        canFlip = true;
+
+                        createMatchCelebration(card1);
+                        createMatchCelebration(card2);
+
+                        if (matchedPairs === 6) {
+                            setTimeout(showWinScreen, 800);
+                        }
+                    }, 500);
+                } else {
+                    setTimeout(() => {
+                        card1.classList.add('wrong');
+                        card2.classList.add('wrong');
+                        
+                        setTimeout(() => {
+                            card1.classList.remove('flipped', 'wrong');
+                            card2.classList.remove('flipped', 'wrong');
+                            flippedCards = [];
+                            canFlip = true;
+                        }, 600);
+                    }, 800);
+                }
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('moves').textContent = moves;
+            document.getElementById('pairs').textContent = `${matchedPairs}/6`;
+        }
+
+        function createMatchCelebration(card) {
+            const rect = card.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            const stars = ['⭐', '✨', '💫', '🌟'];
+            
+            for (let i = 0; i < 6; i++) {
+                const star = document.createElement('div');
+                star.className = 'star-burst';
+                star.textContent = stars[Math.floor(Math.random() * stars.length)];
+                star.style.left = centerX + 'px';
+                star.style.top = centerY + 'px';
+                
+                const angle = (i / 6) * Math.PI * 2;
+                const distance = 60 + Math.random() * 40;
+                star.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+                star.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+                
+                document.body.appendChild(star);
+                
+                setTimeout(() => star.classList.add('burst'), 10);
+                setTimeout(() => star.remove(), 1000);
+            }
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        // ==================== WIN SCREEN ====================
+        function showWinScreen() {
+            document.getElementById('gameSection').classList.add('hidden');
+            document.getElementById('winSection').classList.add('show');
+            document.getElementById('finalMoves').textContent = moves;
+            
+            triggerConfetti();
+        }
+
+        function triggerConfetti() {
+            const container = document.getElementById('confettiContainer');
+            const colors = ['#7BC89C', '#A8E6CF', '#FFD700', '#FF69B4', '#87CEEB', '#DDA0DD', '#98FB98', '#F0E68C'];
+            
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                confetti.style.width = (8 + Math.random() * 8) + 'px';
+                confetti.style.height = (8 + Math.random() * 8) + 'px';
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.animationDuration = (2.5 + Math.random() * 2) + 's';
+                
+                container.appendChild(confetti);
+                
+                setTimeout(() => confetti.classList.add('fall'), 10);
+                setTimeout(() => confetti.remove(), 5000);
+            }
+        }
+
+        // ==================== LETTER SECTION ====================
+        function createLetterDots() {
+            const dotsContainer = document.getElementById('letterDots');
+            dotsContainer.innerHTML = '';
+            
+            letters.forEach((_, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'letter-dot' + (index === 0 ? ' active' : '');
+                dot.onclick = () => goToLetter(index);
+                dotsContainer.appendChild(dot);
+            });
+        }
+
+        function openLetter() {
+            document.getElementById('winSection').classList.remove('show');
+            document.getElementById('winSection').style.display = 'none';
+            document.getElementById('letterSection').classList.add('show');
+            
+            currentLetterIndex = 0;
+            displayLetter(currentLetterIndex, true);
+            
+            startFloatingHearts();
+            setTimeout(triggerConfetti, 500);
+        }
+
+        function displayLetter(index, animate = false) {
+            const letter = letters[index];
+            
+            // Set date
+            const now = new Date();
+            document.getElementById('letterDate').textContent = now.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            // Set letter content
+            document.getElementById('envelopeSeal').textContent = letter.seal;
+            document.getElementById('letterGreeting').textContent = letter.greeting;
+            document.getElementById('letterBody').innerHTML = letter.body;
+            document.getElementById('letterRegards').textContent = letter.regards;
+            document.getElementById('letterSignature').textContent = letter.signature;
+            document.getElementById('letterDecoration').textContent = letter.decoration;
+            
+            // Update counter
+            document.getElementById('letterCounter').textContent = `Letter ${index + 1} of ${letters.length}`;
+            
+            // Update dots
+            document.querySelectorAll('.letter-dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i === index);
+            });
+            
+            // Update navigation buttons
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').textContent = index === letters.length - 1 ? '🏠 Finish' : 'Next →';
+            
+            // Handle animations
+            const letterBody = document.getElementById('letterBody');
+            const letterClosing = document.getElementById('letterClosing');
+            const letterDecoration = document.getElementById('letterDecoration');
+            
+            if (animate) {
+                letterBody.classList.add('animate');
+                letterClosing.classList.add('animate');
+                letterDecoration.classList.add('animate');
+            } else {
+                letterBody.classList.remove('animate');
+                letterClosing.classList.remove('animate');
+                letterDecoration.classList.remove('animate');
+            }
+            
+            // Show/hide completion message
+            document.getElementById('completionMessage').classList.toggle('show', index === letters.length - 1);
+        }
+
+        function nextLetter() {
+            if (currentLetterIndex < letters.length - 1) {
+                const wrapper = document.getElementById('letterContentWrapper');
+                wrapper.classList.add('slide-out-left');
+                
+                setTimeout(() => {
+                    currentLetterIndex++;
+                    displayLetter(currentLetterIndex, true);
+                    wrapper.classList.remove('slide-out-left');
+                    wrapper.classList.add('slide-in-left');
+                    
+                    // Scroll to top
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    
+                    setTimeout(() => {
+                        wrapper.classList.remove('slide-in-left');
+                    }, 400);
+                }, 400);
+            } else {
+                // Last letter - go back to main page
+                goBack();
+            }
+        }
+
+        function prevLetter() {
+            if (currentLetterIndex > 0) {
+                const wrapper = document.getElementById('letterContentWrapper');
+                wrapper.classList.add('slide-out-right');
+                
+                setTimeout(() => {
+                    currentLetterIndex--;
+                    displayLetter(currentLetterIndex, true);
+                    wrapper.classList.remove('slide-out-right');
+                    wrapper.classList.add('slide-in-right');
+                    
+                    // Scroll to top
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    
+                    setTimeout(() => {
+                        wrapper.classList.remove('slide-in-right');
+                    }, 400);
+                }, 400);
+            }
+        }
+
+        function goToLetter(index) {
+            if (index === currentLetterIndex) return;
+            
+            const wrapper = document.getElementById('letterContentWrapper');
+            const direction = index > currentLetterIndex ? 'left' : 'right';
+            
+            wrapper.classList.add(`slide-out-${direction}`);
+            
+            setTimeout(() => {
+                currentLetterIndex = index;
+                displayLetter(currentLetterIndex, true);
+                wrapper.classList.remove(`slide-out-${direction}`);
+                wrapper.classList.add(`slide-in-${direction}`);
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                
+                setTimeout(() => {
+                    wrapper.classList.remove(`slide-in-${direction}`);
+                }, 400);
+            }, 400);
+        }
+
+        function startFloatingHearts() {
+            const container = document.getElementById('heartsContainer');
+            const hearts = ['💖', '💕', '💗', '💓', '💝', '❤️', '🌸', '✨'];
+            
+            // Initial burst
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => createHeart(container, hearts), i * 200);
+            }
+            
+            // Continuous hearts
+            if (heartsInterval) clearInterval(heartsInterval);
+            heartsInterval = setInterval(() => {
+                if (document.getElementById('letterSection').classList.contains('show')) {
+                    createHeart(container, hearts);
+                }
+            }, 800);
+        }
+
+        function createHeart(container, hearts) {
+            const heart = document.createElement('div');
+            heart.className = 'floating-heart';
+            heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+            heart.style.left = Math.random() * 100 + '%';
+            heart.style.bottom = '0';
+            heart.style.fontSize = (1 + Math.random() * 1.5) + 'rem';
+            heart.style.animationDuration = (3 + Math.random() * 2) + 's';
+            
+            container.appendChild(heart);
+            
+            setTimeout(() => heart.classList.add('rise'), 10);
+            setTimeout(() => heart.remove(), 5000);
+        }
+
+        // ==================== NAVIGATION ====================
+        function goBack() {
+            // Save music state
+            if (!bgMusic.paused) {
+                localStorage.setItem('musicTime', bgMusic.currentTime);
+                localStorage.setItem('musicPlaying', 'true');
+            }
+            
+            // Clear hearts interval
+            if (heartsInterval) clearInterval(heartsInterval);
+            
+            // Smooth transition
+            document.body.style.opacity = '0';
+            document.body.style.transition = 'opacity 0.3s';
+            
+            setTimeout(() => {
+                window.location.href = 'next-page.html';
+            }, 300);
+        }
+    </script>
+</body>
+</html>

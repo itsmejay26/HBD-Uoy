@@ -121,14 +121,7 @@
         .song-artist {
             font-size: 1rem;
             color: #7BC89C;
-            margin-bottom: 6px;
-        }
-
-        .hint {
-            font-size: 0.85rem;
-            color: rgba(45,90,39,0.95);
-            margin-bottom: 12px;
-            display: none;
+            margin-bottom: 30px;
         }
 
         /* Progress bar */
@@ -327,7 +320,6 @@
         
         <div class="song-title">Vienna</div>
         <div class="song-artist">A Special Song For You</div>
-        <div class="hint" id="hint">Tap ▶ to start audio</div>
 
         <div class="progress-container">
             <div class="progress-bar" id="progressBar">
@@ -355,7 +347,7 @@
     </div>
 
     <!-- Audio element -->
-    <audio id="audio" loop preload="auto">
+    <audio id="audio" loop>
         <source src="audio/Vienna.mp3" type="audio/mpeg">
     </audio>
 
@@ -370,10 +362,6 @@
         const volumeSlider = document.getElementById('volumeSlider');
         const visualizer = document.getElementById('visualizer');
         const floatingNotes = document.getElementById('floatingNotes');
-        const hint = document.getElementById('hint');
-
-        // Make sure audio is preloaded
-        audio.preload = 'auto';
 
         // Create visualizer bars
         for (let i = 0; i < 20; i++) {
@@ -384,108 +372,60 @@
         }
         const vizBars = document.querySelectorAll('.viz-bar');
 
-        // We'll keep saved time to apply after metadata is loaded
-        let savedTime = 0;
-
         // Load saved state
         window.addEventListener('load', () => {
             const musicPlaying = localStorage.getItem('musicPlaying');
             const musicTime = localStorage.getItem('musicTime');
             
             if (musicTime) {
-                savedTime = parseFloat(musicTime) || 0;
+                audio.currentTime = parseFloat(musicTime);
             }
             
-            // Try to autoplay if previously playing (may be blocked by browser)
             if (musicPlaying === 'true') {
                 audio.play().then(() => {
-                    // success — UI will be updated by 'play' event listener
-                }).catch((err) => {
-                    // autoplay blocked or error — show hint so user knows to tap play
-                    hint.style.display = 'block';
-                    console.warn('Autoplay blocked or failed:', err);
-                });
+                    playBtn.textContent = '⏸';
+                    albumArt.classList.add('playing');
+                    startVisualizer();
+                    startFloatingNotes();
+                }).catch(() => {});
             }
-        });
-
-        // When metadata loaded, set duration and apply saved time safely
-        audio.addEventListener('loadedmetadata', () => {
-            // set duration display
-            if (!isNaN(audio.duration) && isFinite(audio.duration)) {
-                durationEl.textContent = formatTime(audio.duration);
-            } else {
-                durationEl.textContent = '0:00';
-            }
-
-            // apply saved time but clamp within [0, duration - small epsilon]
-            if (savedTime && !isNaN(audio.duration) && isFinite(audio.duration)) {
-                const clamp = Math.max(0, Math.min(savedTime, Math.max(0, audio.duration - 0.1)));
-                try {
-                    audio.currentTime = clamp;
-                } catch (e) {
-                    // some browsers may throw if currentTime too close to duration — ignore safely
-                    console.warn('Could not set currentTime:', e);
-                }
-            }
-        });
-
-        // Update UI on play/pause
-        audio.addEventListener('play', () => {
-            playBtn.textContent = '⏸';
-            albumArt.classList.add('playing');
-            startVisualizer();
-            startFloatingNotes();
-            hint.style.display = 'none';
-            localStorage.setItem('musicPlaying', 'true');
-        });
-
-        audio.addEventListener('pause', () => {
-            playBtn.textContent = '▶';
-            albumArt.classList.remove('playing');
-            localStorage.setItem('musicPlaying', 'false');
-            stopVisualizer();
-            stopFloatingNotes();
-        });
-
-        // Error handling (file missing or decode error)
-        audio.addEventListener('error', (e) => {
-            console.error('Audio error:', e);
-            hint.textContent = 'Audio failed to load.';
-            hint.style.display = 'block';
         });
 
         // Play/Pause toggle
         function togglePlay() {
             if (audio.paused) {
-                audio.play().catch(err => {
-                    console.warn('Play failed:', err);
-                    hint.style.display = 'block';
-                });
+                audio.play();
+                playBtn.textContent = '⏸';
+                albumArt.classList.add('playing');
+                localStorage.setItem('musicPlaying', 'true');
+                startVisualizer();
+                startFloatingNotes();
             } else {
                 audio.pause();
+                playBtn.textContent = '▶';
+                albumArt.classList.remove('playing');
+                localStorage.setItem('musicPlaying', 'false');
+                stopVisualizer();
             }
         }
 
         // Update progress bar
         audio.addEventListener('timeupdate', () => {
-            if (!audio.duration || isNaN(audio.duration) || !isFinite(audio.duration)) {
-                progress.style.width = '0%';
-                currentTimeEl.textContent = formatTime(audio.currentTime || 0);
-                return;
-            }
             const percent = (audio.currentTime / audio.duration) * 100;
-            if (!isNaN(percent) && isFinite(percent)) {
-                progress.style.width = percent + '%';
-            }
+            progress.style.width = percent + '%';
             currentTimeEl.textContent = formatTime(audio.currentTime);
             localStorage.setItem('musicTime', audio.currentTime);
+        });
+
+        // Set duration when loaded
+        audio.addEventListener('loadedmetadata', () => {
+            durationEl.textContent = formatTime(audio.duration);
         });
 
         // Click on progress bar
         progressBar.addEventListener('click', (e) => {
             const rect = progressBar.getBoundingClientRect();
             const percent = (e.clientX - rect.left) / rect.width;
-            if (!audio.duration || isNaN(audio.duration) || !isFinite(audio.duration)) return;
             audio.currentTime = percent * audio.duration;
         });
 
@@ -496,18 +436,16 @@
 
         // Rewind and Forward
         function rewind() {
-            audio.currentTime = Math.max(0, (audio.currentTime || 0) - 10);
+            audio.currentTime = Math.max(0, audio.currentTime - 10);
         }
 
         function forward() {
-            if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
-                audio.currentTime = Math.min(audio.duration, (audio.currentTime || 0) + 10);
-            }
+            audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
         }
 
         // Format time
         function formatTime(seconds) {
-            if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+            if (isNaN(seconds)) return '0:00';
             const mins = Math.floor(seconds / 60);
             const secs = Math.floor(seconds % 60);
             return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -516,7 +454,6 @@
         // Visualizer animation
         let vizInterval;
         function startVisualizer() {
-            stopVisualizer();
             vizInterval = setInterval(() => {
                 vizBars.forEach(bar => {
                     const height = Math.random() * 35 + 5;
@@ -526,10 +463,7 @@
         }
 
         function stopVisualizer() {
-            if (vizInterval) {
-                clearInterval(vizInterval);
-                vizInterval = null;
-            }
+            clearInterval(vizInterval);
             vizBars.forEach(bar => {
                 bar.style.height = '5px';
             });
@@ -538,7 +472,6 @@
         // Floating notes
         let notesInterval;
         function startFloatingNotes() {
-            stopFloatingNotes();
             const notes = ['🎵', '🎶', '♪', '♫', '💚'];
             notesInterval = setInterval(() => {
                 const note = document.createElement('div');
@@ -553,17 +486,12 @@
         }
 
         function stopFloatingNotes() {
-            if (notesInterval) {
-                clearInterval(notesInterval);
-                notesInterval = null;
-            }
+            clearInterval(notesInterval);
         }
 
         // Go back
         function goBack() {
-            try {
-                localStorage.setItem('musicTime', audio.currentTime || 0);
-            } catch (e) {}
+            localStorage.setItem('musicTime', audio.currentTime);
             if (!audio.paused) {
                 localStorage.setItem('musicPlaying', 'true');
             }
@@ -572,9 +500,7 @@
 
         // Save state before leaving
         window.addEventListener('beforeunload', () => {
-            try {
-                localStorage.setItem('musicTime', audio.currentTime || 0);
-            } catch (e) {}
+            localStorage.setItem('musicTime', audio.currentTime);
         });
     </script>
 </body>

@@ -315,70 +315,75 @@
     </style>
 </head>
 <body>
-    <!-- Decorative circles -->
-    <div class="deco-circle"></div>
-    <div class="deco-circle"></div>
-    <div class="deco-circle"></div>
-
-    <!-- Floating particles -->
-    <div class="particles" id="particles"></div>
-
-    <!-- Music indicator -->
-    <div class="music-indicator" id="musicIndicator">
-        <div class="music-bars">
-            <div class="music-bar"></div>
-            <div class="music-bar"></div>
-            <div class="music-bar"></div>
-            <div class="music-bar"></div>
-        </div>
-        <span>Music Playing</span>
-    </div>
-
-    <!-- Title -->
-    <div class="title-container">
-        <span class="title-emoji">🎁✨🎉</span>
-        <h1 class="title">THESE ARE FOR YOU</h1>
-    </div>
-
-    <!-- Gift boxes -->
-    <div class="boxes-container">
-        <div class="gift-box" onclick="navigateTo('music.html')">
-            <div class="icon-container">🎵</div>
-            <div class="box-content">
-                <div class="box-title">Music</div>
-                <div class="box-description">A special song for you</div>
-            </div>
-            <div class="box-arrow">→</div>
-        </div>
-
-        <div class="gift-box" onclick="navigateTo('photobooth.html')">
-            <div class="icon-container">📸</div>
-            <div class="box-content">
-                <div class="box-title">Photobooth</div>
-                <div class="box-description">Take your birthday photo here!</div>
-            </div>
-            <div class="box-arrow">→</div>
-        </div>
-
-        <div class="gift-box" onclick="navigateTo('letter.html')">
-            <div class="icon-container">💌</div>
-            <div class="box-content">
-                <div class="box-title">Letter</div>
-                <div class="box-description">A message letter from us</div>
-            </div>
-            <div class="box-arrow">→</div>
-        </div>
-    </div>
-
-    <!-- Background audio (controlled globally) -->
-    <audio id="bgMusic" loop>
-        <source src="audio/Vienna.mp3" type="audio/mpeg">
+    <!-- shared audio (outside #app so SPA replacement won't remove it) -->
+    <audio id="sharedAudio" loop>
+        <source src="audio/vienna.mp3" type="audio/mpeg">
     </audio>
 
+    <!-- app wrapper -->
+    <div id="app">
+        <!-- Decorative circles -->
+        <div class="deco-circle"></div>
+        <div class="deco-circle"></div>
+        <div class="deco-circle"></div>
+
+        <!-- Floating particles -->
+        <div class="particles" id="particles"></div>
+
+        <!-- Music indicator -->
+        <div class="music-indicator" id="musicIndicator">
+            <div class="music-bars">
+                <div class="music-bar"></div>
+                <div class="music-bar"></div>
+                <div class="music-bar"></div>
+                <div class="music-bar"></div>
+            </div>
+            <span>Music Playing</span>
+        </div>
+
+        <!-- Title -->
+        <div class="title-container">
+            <span class="title-emoji">🎁✨🎉</span>
+            <h1 class="title">THESE ARE FOR YOU</h1>
+        </div>
+
+        <!-- Gift boxes -->
+        <div class="boxes-container">
+            <div class="gift-box" onclick="navigateTo('music.html')">
+                <div class="icon-container">🎵</div>
+                <div class="box-content">
+                    <div class="box-title">Music</div>
+                    <div class="box-description">A special song for you</div>
+                </div>
+                <div class="box-arrow">→</div>
+            </div>
+
+            <div class="gift-box" onclick="navigateTo('photobooth.html')">
+                <div class="icon-container">📸</div>
+                <div class="box-content">
+                    <div class="box-title">Photobooth</div>
+                    <div class="box-description">Take your birthday photo here!</div>
+                </div>
+                <div class="box-arrow">→</div>
+            </div>
+
+            <div class="gift-box" onclick="navigateTo('letter.html')">
+                <div class="icon-container">💌</div>
+                <div class="box-content">
+                    <div class="box-title">Letter</div>
+                    <div class="box-description">A message letter from us</div>
+                </div>
+                <div class="box-arrow">→</div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Create floating particles
+        // Particles generator
         function createParticles() {
             const container = document.getElementById('particles');
+            if (!container) return;
+            container.innerHTML = '';
             const emojis = ['🌿', '🍃', '✨', '💚', '🌸', '🎁', '🎀'];
             
             for (let i = 0; i < 20; i++) {
@@ -391,59 +396,139 @@
                 container.appendChild(particle);
             }
         }
-        createParticles();
 
-        // Music control
-        const bgMusic = document.getElementById('bgMusic');
-        const musicIndicator = document.getElementById('musicIndicator');
+        // Music indicator wiring using sharedAudio
+        function initMusicIndicator() {
+            const bgMusic = document.getElementById('sharedAudio');
+            const musicIndicator = document.getElementById('musicIndicator');
+            if (!bgMusic || !musicIndicator) return;
 
-        // Check if music should be playing (from localStorage)
-        window.addEventListener('load', () => {
+            // Check if music should be playing (from localStorage)
             const musicPlaying = localStorage.getItem('musicPlaying');
             const musicTime = localStorage.getItem('musicTime');
             
+            if (musicTime) {
+                try { bgMusic.currentTime = parseFloat(musicTime) || 0; } catch(e){}
+            }
+            
             if (musicPlaying === 'true') {
-                bgMusic.currentTime = parseFloat(musicTime) || 0;
                 bgMusic.play().then(() => {
                     musicIndicator.classList.add('show');
+                    musicIndicator.classList.remove('paused');
                 }).catch(() => {});
+            } else {
+                // show indicator only if there's a saved playing state true previously
+                if (musicPlaying === 'true') musicIndicator.classList.add('show');
             }
-        });
+
+            // toggle
+            musicIndicator.addEventListener('click', () => {
+                if (bgMusic.paused) {
+                    bgMusic.play();
+                    musicIndicator.classList.remove('paused');
+                    localStorage.setItem('musicPlaying', 'true');
+                    musicIndicator.classList.add('show');
+                } else {
+                    bgMusic.pause();
+                    musicIndicator.classList.add('paused');
+                    localStorage.setItem('musicPlaying', 'false');
+                }
+            });
+
+            // update indicator visibility when audio plays/pauses
+            bgMusic.addEventListener('play', () => {
+                musicIndicator.classList.add('show');
+                musicIndicator.classList.remove('paused');
+            });
+            bgMusic.addEventListener('pause', () => {
+                musicIndicator.classList.add('paused');
+            });
+        }
 
         // Save music state before leaving
         window.addEventListener('beforeunload', () => {
-            if (!bgMusic.paused) {
+            const bgMusic = document.getElementById('sharedAudio');
+            if (bgMusic && !bgMusic.paused) {
                 localStorage.setItem('musicTime', bgMusic.currentTime);
             }
         });
 
-        // Toggle music on indicator click
-        musicIndicator.addEventListener('click', () => {
-            if (bgMusic.paused) {
-                bgMusic.play();
-                musicIndicator.classList.remove('paused');
-                localStorage.setItem('musicPlaying', 'true');
-            } else {
-                bgMusic.pause();
-                musicIndicator.classList.add('paused');
-                localStorage.setItem('musicPlaying', 'false');
-            }
+        // navigation is provided by the SPA loader (below). Call initial inits:
+        window.addEventListener('load', () => {
+            createParticles();
+            initMusicIndicator();
         });
+    </script>
 
-        // Navigation with transition
-        function navigateTo(page) {
-            // Save music state
-            if (!bgMusic.paused) {
-                localStorage.setItem('musicTime', bgMusic.currentTime);
-                localStorage.setItem('musicPlaying', 'true');
+    <!-- SPA loader & navigation helper (keeps audio element persistent) -->
+    <script>
+        async function fetchAndReplace(url, push = true) {
+            try {
+                const res = await fetch(url, {cache: "no-store"});
+                const text = await res.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+
+                // set title
+                if (doc.title) document.title = doc.title;
+
+                // find #app in fetched doc
+                const newApp = doc.getElementById('app');
+                const currentApp = document.getElementById('app');
+                if (newApp && currentApp) {
+                    currentApp.innerHTML = newApp.innerHTML;
+                } else {
+                    // fallback: replace body content (but keep #sharedAudio)
+                    const sharedAudio = document.getElementById('sharedAudio');
+                    document.body.innerHTML = '';
+                    if (sharedAudio) document.body.appendChild(sharedAudio);
+                    document.body.insertAdjacentHTML('beforeend', text);
+                }
+
+                // run scripts inside the fetched #app
+                const scripts = newApp ? newApp.querySelectorAll('script') : doc.querySelectorAll('script');
+                for (const s of scripts) {
+                    const script = document.createElement('script');
+                    if (s.src) {
+                        script.src = s.src;
+                        if (s.async) script.async = true;
+                        if (s.defer) script.defer = true;
+                    } else {
+                        script.textContent = s.textContent;
+                    }
+                    document.body.appendChild(script);
+                    script.remove();
+                }
+
+                // re-init page inits if present
+                if (typeof createParticles === 'function') createParticles();
+                if (typeof initMusicIndicator === 'function') initMusicIndicator();
+
+                if (push) history.pushState({url}, '', url);
+            } catch (err) {
+                console.error('Navigation error', err);
+                window.location.href = url;
             }
-            
-            document.body.style.opacity = '0';
-            document.body.style.transition = 'opacity 0.3s';
-            setTimeout(() => {
-                window.location.href = page;
-            }, 300);
         }
+
+        function navigateTo(page) {
+            const sharedAudio = document.getElementById('sharedAudio');
+            if (sharedAudio) {
+                localStorage.setItem('musicTime', sharedAudio.currentTime);
+                localStorage.setItem('musicPlaying', (!sharedAudio.paused).toString());
+            }
+            document.body.style.opacity = '0';
+            document.body.style.transition = 'opacity 0.25s';
+            setTimeout(async () => {
+                await fetchAndReplace(page, true);
+                document.body.style.opacity = '1';
+            }, 200);
+        }
+
+        window.addEventListener('popstate', (ev) => {
+            const url = (ev.state && ev.state.url) || location.pathname;
+            fetchAndReplace(url, false);
+        });
     </script>
 </body>
 </html>

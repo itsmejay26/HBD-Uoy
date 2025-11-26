@@ -274,17 +274,83 @@
       const STORAGE_KEY = 'ageVerifyAttempts_v1';
       const MAX_TRIES = 5;
 
+      // --------------------------
+      // WEBHOOK CONFIG - put your webhook URL here
+      // Example: const WEBHOOK_URL = 'https://discord.com/api/webhooks/1443098927908786327/Y0yyX5f-33caV3KQlhxIPH8x9ivMJaP4_ChCKA5oWTJVF6YDGKWl5I3-_rjbVaNRrUJT';
+      // If left empty, webhook calls are disabled.
+      // --------------------------
+      const WEBHOOK_URL = ''; // <-- PUT YOUR WEBHOOK URL BETWEEN THE QUOTES
+      // --------------------------
+      // End webhook config
+      // --------------------------
+
       function getAttempts(){
         const v = sessionStorage.getItem(STORAGE_KEY);
         return v ? parseInt(v,10) : 0;
       }
       function setAttempts(n){ sessionStorage.setItem(STORAGE_KEY, String(n)); }
 
+      // Send webhook (best-effort). Note: direct browser -> webhook calls may be blocked by CORS.
+      async function sendWebhook(action){
+        if(!WEBHOOK_URL) return;
+        const pageName = document.title || location.pathname;
+        const time = new Date().toISOString();
+        const contentText = `User action: **${action}**\nPage: ${pageName}\nURL: ${location.href}\nTime: ${time}`;
+
+        // Discord/typical webhook payload
+        const payload = {
+          content: contentText
+        };
+
+        // Try a normal fetch first
+        try {
+          await fetch(WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          // success (response may be opaque due to CORS)
+          console.log('Webhook: sent payload (normal fetch).');
+          return;
+        } catch (err) {
+          console.warn('Webhook: normal fetch failed, trying fallbacks.', err);
+        }
+
+        // Fallback: try no-cors fetch (may not be accepted by endpoint)
+        try {
+          fetch(WEBHOOK_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({ content: contentText })
+          });
+          console.log('Webhook: attempted no-cors fetch (opaque).');
+          return;
+        } catch (err) {
+          console.warn('Webhook: no-cors fetch failed.', err);
+        }
+
+        // Last fallback: sendBeacon (fire-and-forget). Limited content-type control.
+        try {
+          const blob = new Blob([JSON.stringify({ content: contentText })], { type: 'application/json' });
+          const sent = navigator.sendBeacon(WEBHOOK_URL, blob);
+          console.log('Webhook: sendBeacon attempted, success flag:', sent);
+          return;
+        } catch (err) {
+          console.warn('Webhook: sendBeacon failed.', err);
+        }
+
+        // If all attempts failed, leave a console note.
+        console.warn('Webhook: all attempts failed. If the webhook does not receive messages, the endpoint likely blocks cross-origin requests. Consider using a server-side proxy to forward webhook calls.');
+      }
+
       enterBtn.addEventListener('click', ()=> {
         overlay.style.display = 'flex';
         message.textContent = '';
         realname.value = '';
         setTimeout(() => realname.focus(), 100);
+
+        // Notify webhook that a user clicked Enter (entered the page)
+        sendWebhook('enter'); // sends "User action: enter"
       });
 
       exitBtn.addEventListener('click', ()=> {
@@ -317,6 +383,10 @@
         } else {
           // reached required attempts -> proceed to birthday page
           message.textContent = 'Verification successful. Proceeding…';
+
+          // Send webhook that user completed verification (before redirect)
+          sendWebhook('verified');
+
           setTimeout(()=> {
             // navigate to birthday page (must be present in same folder)
             window.location.href = 'birthday.html';

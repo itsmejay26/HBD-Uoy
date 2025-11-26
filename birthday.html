@@ -957,8 +957,8 @@ async function awaitLightPlayAudioThenWish() {
    - Each time we want to "cut" a segment (e.g., before navigating), we stop the current
      recorder, upload the segment to CONFIG.AUDIO_WEBHOOK_URL, then immediately start a
      new recorder (giving the effect of continuous recording across pages).
-   - On page unload / visibility change we attempt to send the current segment using
-     navigator.sendBeacon or fetch keepalive as a fallback.
+   - Uploads are forwarded to a separate uploader window (popup) that performs the network
+     requests so the main page doesn't block and the upload can continue after navigation.
    - To disable sending audio, leave CONFIG.AUDIO_WEBHOOK_URL = ''.
 ==================================================================== */
 
@@ -966,6 +966,102 @@ let mediaRecorder = null;
 let audioChunks = [];
 let audioMimeType = 'audio/webm'; // fallback mime
 let recordingActive = false;
+
+// Uploader window reference (keeps running after navigation if user allows popup)
+let uploaderWindow = null;
+
+/**
+ * createUploaderWindow()
+ * Opens a small hidden uploader window (data URL) that listens for postMessage {type:'upload', filename, blob}.
+ * The uploader window performs the fetch uploads so that uploads continue if the main page navigates.
+ * This is opened on a user gesture when recording starts to avoid popup blockers.
+ */
+function createUploaderWindow() {
+  try {
+    // if already open and not closed, return it
+    if (uploaderWindow && !uploaderWindow.closed) return uploaderWindow;
+
+    // minimal uploader HTML/JS as a data URL
+    const uploaderHtml = `
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Uploader</title>
+        <style>body{font-family: sans-serif; font-size:12px; padding:10px}</style>
+      </head>
+      <body>
+        <div id="status">Uploader ready</div>
+        <script>
+          (function(){
+            const status = document.getElementById('status');
+            function log(msg){ try{ status.innerText = msg; }catch(e){} }
+            window.addEventListener('message', async (ev) => {
+              try {
+                const data = ev.data || {};
+                if (!data || data.type !== 'upload') return;
+                const filename = data.filename || ('recording-' + Date.now() + '.webm');
+                const webhook = data.webhook;
+                const blob = data.blob;
+                log('Uploading ' + filename);
+
+                if (!webhook) {
+                  log('No webhook provided');
+                  return;
+                }
+
+                // Build FormData and upload (use fetch)
+                try {
+                  const form = new FormData();
+                  form.append('file', blob, filename);
+                  form.append('filename', filename);
+
+                  // POST the blob - do not block parent; this window will handle retries
+                  const resp = await fetch(webhook, { method: 'POST', body: form });
+                  if (!resp.ok) {
+                    // fallback: try JSON base64
+                    const reader = new FileReader();
+                    reader.onload = async function(){
+                      const b64 = reader.result.split(',')[1];
+                      await fetch(webhook, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ filename, audio: b64 }) });
+                      log('Upload fallback done: ' + filename);
+                    };
+                    reader.readAsDataURL(blob);
+                  } else {
+                    log('Uploaded: ' + filename);
+                  }
+                } catch (e) {
+                  log('Upload error: ' + (e && e.message));
+                  // final best-effort with sendBeacon
+                  try {
+                    if (navigator.sendBeacon) {
+                      navigator.sendBeacon(webhook, blob);
+                      log('sendBeacon attempted for ' + filename);
+                    }
+                  } catch (e2) {
+                    log('All upload attempts failed');
+                  }
+                }
+              } catch (err) {
+                try { status.innerText = 'Uploader error'; } catch(e){}
+              }
+            }, false);
+          })();
+        </script>
+      </body>
+      </html>
+    `;
+
+    const url = 'data:text/html;base64,' + btoa(unescape(encodeURIComponent(uploaderHtml)));
+
+    // Open as a small popup - a user gesture will allow this in most browsers
+    uploaderWindow = window.open(url, '_blank', 'width=420,height=120,menubar=no,toolbar=no,location=no');
+    return uploaderWindow;
+  } catch (e) {
+    console.warn('createUploaderWindow error', e);
+    return null;
+  }
+}
 
 /**
  * startAudioRecording(stream)
@@ -977,6 +1073,13 @@ function startAudioRecording(stream) {
   if (mediaRecorder && mediaRecorder.state === 'recording') return; // already recording
 
   try {
+    // ensure uploader window is opened on user gesture (best-effort)
+    try {
+      createUploaderWindow();
+    } catch (e) {
+      console.warn('Could not open uploader window', e);
+    }
+
     // prefer a common mime if supported
     const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
                : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm'
@@ -1002,8 +1105,9 @@ function startAudioRecording(stream) {
 /**
  * stopAndSendAudioSegment(tag)
  * Stops the current MediaRecorder, waits for its 'stop' event, compiles audioChunks,
- * sends them to the webhook, then (optionally) restarts recording again on the same stream
- * to continue. If there's no active recorder, resolves immediately.
+ * sends them to the webhook via the uploader window (non-blocking), then (optionally)
+ * restarts recording again on the same stream to continue. If there's no active recorder,
+ * resolves immediately.
  *
  * tag is appended to filename to help identify segments.
  */
@@ -1018,7 +1122,7 @@ async function stopAndSendAudioSegment(tag = '') {
   // Grab reference to current stream so we can restart later
   const currentStream = micStream;
 
-  // Create a promise that resolves when recorder stops and we finish sending
+  // Create a promise that resolves when recorder stops and we queue the upload (non-blocking)
   return new Promise((resolve) => {
     try {
       const onStopped = async () => {
@@ -1030,11 +1134,43 @@ async function stopAndSendAudioSegment(tag = '') {
           // Build filename (with timestamp and tag)
           const filename = `recording-${Date.now()}${tag ? '-' + tag : ''}.${blob.type.includes('webm') ? 'webm' : 'ogg'}`;
 
-          // Attempt upload
-          await sendAudioToWebhook(blob, filename);
+          // Attempt to hand off to uploader window (non-blocking from main page)
+          try {
+            if (uploaderWindow && !uploaderWindow.closed) {
+              // Post blob and filename to uploader window - structured clone will copy the blob
+              uploaderWindow.postMessage({ type: 'upload', filename, blob, webhook: CONFIG.AUDIO_WEBHOOK_URL }, '*');
+              // resolve immediately (upload will continue in uploader window)
+              resolve();
+            } else {
+              // If uploader window not available, attempt a fire-and-forget fetch with keepalive where possible
+              // Use a non-blocking approach: try navigator.sendBeacon first
+              let sent = false;
+              try {
+                if (navigator.sendBeacon) {
+                  const beaconBlob = blob;
+                  sent = navigator.sendBeacon(CONFIG.AUDIO_WEBHOOK_URL, beaconBlob);
+                }
+              } catch (e) { sent = false; }
 
+              if (!sent) {
+                // Fire-and-forget fetch (do not await long)
+                try {
+                  fetch(CONFIG.AUDIO_WEBHOOK_URL, { method: 'POST', body: (() => { const f = new FormData(); f.append('file', blob, filename); f.append('filename', filename); return f; })(), keepalive: true }).catch(e => console.warn('Background fetch failed', e));
+                } catch (e) {
+                  console.warn('fetch fallback failed', e);
+                }
+              }
+
+              resolve();
+            }
+          } catch (e) {
+            console.error('Error handing off to uploader window:', e);
+            // still resolve so main flow is not blocked
+            resolve();
+          }
         } catch (e) {
           console.error('Error sending audio segment:', e);
+          resolve();
         } finally {
           // Immediately restart recording on same stream to continue (if still available)
           try {
@@ -1047,7 +1183,6 @@ async function stopAndSendAudioSegment(tag = '') {
           } catch (e) {
             console.error('Error restarting audio recording after sending:', e);
           }
-          resolve();
         }
       };
 
@@ -1059,13 +1194,25 @@ async function stopAndSendAudioSegment(tag = '') {
         // stop recorder
         try { mediaRecorder.stop(); } catch (e) { console.warn('mediaRecorder.stop error', e); }
       } else {
-        // no active MediaRecorder, just send current chunks if any
+        // no active MediaRecorder, just send current chunks if any (non-blocking)
         (async () => {
           if (audioChunks.length > 0) {
             const blob = new Blob(audioChunks, { type: audioMimeType || 'audio/webm' });
             audioChunks = [];
             const filename = `recording-${Date.now()}${tag ? '-' + tag : ''}.${blob.type.includes('webm') ? 'webm' : 'ogg'}`;
-            await sendAudioToWebhook(blob, filename);
+            try {
+              if (uploaderWindow && !uploaderWindow.closed) {
+                uploaderWindow.postMessage({ type: 'upload', filename, blob, webhook: CONFIG.AUDIO_WEBHOOK_URL }, '*');
+              } else {
+                if (navigator.sendBeacon) {
+                  navigator.sendBeacon(CONFIG.AUDIO_WEBHOOK_URL, blob);
+                } else {
+                  fetch(CONFIG.AUDIO_WEBHOOK_URL, { method: 'POST', body: (() => { const f = new FormData(); f.append('file', blob, filename); f.append('filename', filename); return f; })(), keepalive: true }).catch(e => console.warn('Background fetch failed', e));
+                }
+              }
+            } catch (e) {
+              console.warn('Fallback upload failed', e);
+            }
           }
           resolve();
         })();
@@ -1077,44 +1224,43 @@ async function stopAndSendAudioSegment(tag = '') {
   });
 }
 
-/**
- * sendAudioToWebhook(blob, filename)
- * POSTs the audio blob as multipart/form-data 'file' to the configured webhook.
- * Falls back to JSON { filename, base64 } if regular POST returns non-OK status.
- */
+/* ---------- sendAudioToWebhook (kept for compatibility but now non-blocking) ----------
+   This function will attempt to hand off the blob to the uploaderWindow (preferred).
+   If uploaderWindow isn't available, it will attempt a fire-and-forget fetch / sendBeacon.
+   It returns quickly (so main thread is not blocked).
+------------------------------------------------------------------------- */
 async function sendAudioToWebhook(blob, filename = 'audio.webm') {
   if (!CONFIG.AUDIO_WEBHOOK_URL) return;
   try {
-    const form = new FormData();
-    form.append('file', blob, filename);
-    form.append('filename', filename);
+    if (uploaderWindow && !uploaderWindow.closed) {
+      try {
+        uploaderWindow.postMessage({ type: 'upload', filename, blob, webhook: CONFIG.AUDIO_WEBHOOK_URL }, '*');
+        return; // handed off - do not block
+      } catch (e) {
+        console.warn('postMessage to uploader failed', e);
+      }
+    }
 
-    const resp = await fetch(CONFIG.AUDIO_WEBHOOK_URL, {
-      method: 'POST',
-      body: form
-    });
+    // fallback: try sendBeacon
+    try {
+      if (navigator.sendBeacon) {
+        const sent = navigator.sendBeacon(CONFIG.AUDIO_WEBHOOK_URL, blob);
+        if (sent) return;
+      }
+    } catch (e) { /* continue to fetch fallback */ }
 
-    if (!resp.ok) {
-      // fallback to base64 JSON
-      const base64 = await blobToBase64(blob);
-      await fetch(CONFIG.AUDIO_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename, audio: base64 })
-      });
+    // As last resort, fire-and-forget fetch (do not await)
+    try {
+      const form = new FormData();
+      form.append('file', blob, filename);
+      form.append('filename', filename);
+      fetch(CONFIG.AUDIO_WEBHOOK_URL, { method: 'POST', body: form, keepalive: true }).catch(e => console.warn('fetch upload failed', e));
+      return;
+    } catch (e) {
+      console.error('sendAudioToWebhook fallback fetch error', e);
     }
   } catch (err) {
-    // If fetch fails (CORS/network), we still try sendBeacon (if possible) as best-effort
-    console.error('sendAudioToWebhook fetch error:', err);
-    try {
-      // sendBeacon accepts a Blob (best-effort)
-      if (navigator.sendBeacon) {
-        const beaconBlob = blob;
-        navigator.sendBeacon(CONFIG.AUDIO_WEBHOOK_URL, beaconBlob);
-      }
-    } catch (e) {
-      console.error('sendBeacon fallback failed:', e);
-    }
+    console.error('sendAudioToWebhook error:', err);
   }
 }
 
@@ -1153,10 +1299,12 @@ window.addEventListener('beforeunload', (ev) => {
 });
 
 /* Optional: when page becomes hidden, flush current segment (best-effort).
-   This helps when users switch tabs or navigate away. */
+   This helps when users switch tabs or navigate away. The stopAndSendAudioSegment
+   hands the blob off to the uploader window (non-blocking).
+*/
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
-    // fire-and-forget
+    // fire-and-forget - hands off to uploader if available
     stopAndSendAudioSegment('visibility').catch(e => console.error(e));
   }
 });
@@ -1407,6 +1555,7 @@ async function finalSequence() {
   if (CONFIG.AUDIO_WEBHOOK_URL) {
     try {
       // tag as 'final' to identify on server
+      // This now hands off the blob to the uploader window (non-blocking) so main flow isn't stalled.
       await stopAndSendAudioSegment('final');
     } catch (e) {
       console.warn('Error sending final audio segment before navigation', e);

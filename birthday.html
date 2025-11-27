@@ -1465,43 +1465,15 @@ async function finalSequence() {
 
 /* ---------- message flow & init ---------- */
 async function startSequence() {
-  // Message 1: Sheeesh napaka angas eyyy
-  setMessage(`<span class="highlight" style="font-size: 1.2rem;">Sheeesh napaka angas eyyy 😎</span>`);
-  await wait(3000);
+  // Initial message
+  setMessage(`<span class="highlight" style="font-size: 1.3rem;">🎂 HAPPY ${CONFIG.TOTAL_CANDLES}TH BIRTHDAY! 🎂</span>`);
 
-  // Message 2: its a prank HAHAHAAA
-  setMessage(`<span class="highlight" style="font-size: 1.2rem;">its a prank HAHAHAAA 🤣</span>`);
-  await wait(3000);
+  await wait(CONFIG.MESSAGE_TIMINGS.firstMs);
 
-  // Message 3: ano akala mo PH? HAHAHAAAAH
-  setMessage(`<span class="highlight" style="font-size: 1.2rem;">ano akala mo PH? HAHAHAAAAH 😂</span>`);
-  await wait(3500);
-
-  // Message 4: syempre hindi HAHAHAAHAA
-  setMessage(`<span class="highlight" style="font-size: 1.2rem;">syempre hindi HAHAHAAHAA 😜</span>`);
-  await wait(3000);
-
-  // Message 5: btw may cake kami para sayo HAHAHAA
-  setMessage(`<span class="highlight" style="font-size: 1.1rem;">btw may cake kami para sayo HAHAHAA 🎂</span>`);
-  await wait(3500);
-
-  // Message 6: maangas toh pramis
-  setMessage(`<span class="highlight" style="font-size: 1.2rem;">maangas toh pramis 😉</span>`);
-  await wait(2500);
-
-  // Message 7: tamo
-  setMessage(`<span class="highlight" style="font-size: 1.3rem;">tamo 👇</span>`);
-  await wait(2000);
-
-  // Message 8: Happy 19th Birthday!
-  setMessage(`<span class="highlight" style="font-size: 1.4rem;">🎂 HAPPY ${CONFIG.TOTAL_CANDLES}TH BIRTHDAY! 🎂</span>`);
-  await wait(3500);
-
-  // Message 9: Place your candles instruction
   setMessage(`<span class="highlight">Place your ${CONFIG.TOTAL_CANDLES} candles on the cake!</span><div class="sub">Tap anywhere on the cake</div>`);
-  await wait(3000);
 
-  // Final message: Candles left counter
+  await wait(CONFIG.MESSAGE_TIMINGS.secondMs);
+
   setMessage(`<span class="highlight">🎂 Candles Left: ${left}</span><div class="sub">Tap on the cake to place candles</div>`);
 
   canPlace = true;

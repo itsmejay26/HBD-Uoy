@@ -1,14 +1,4 @@
-Unfortunately, **automatically detecting files in a folder is not possible with pure HTML/JavaScript** running in the browser due to security restrictions. The browser cannot access the local file system to scan folders.
 
-However, I have two solutions for you:
-
-## Solution 1: Using a Simple JSON File (Easiest)
-
-You create a simple `media-list.json` file that lists your media files, and the page reads from it automatically.
-
-### memories.html (Auto-loads from JSON)
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1137,50 +1127,3 @@ You create a simple `media-list.json` file that lists your media files, and the 
     </script>
 </body>
 </html>
-```
-
----
-
-## How to Use:
-
-### Simple Setup:
-
-1. **Create a `memories` folder** in your project directory
-
-2. **Add your photos and videos** to the `memories` folder
-
-3. **Edit only the `mediaFiles` array** at the top of the script - just list the filenames:
-
-```javascript
-const mediaFiles = [
-    'birthday_party.jpg',
-    'beach_day.png',
-    'funny_video.mp4',
-    'sunset.jpg',
-    'dancing.mp4',
-    // Add more filenames...
-];
-```
-
-That's it! The script will:
-- ✅ Automatically detect if each file is an image or video based on extension
-- ✅ Build the full path (`memories/filename.ext`)
-- ✅ Handle all supported formats
-
-### Supported Formats:
-
-**Images:** jpg, jpeg, png, gif, webp, bmp, svg
-
-**Videos:** mp4, webm, mov, avi, mkv, ogg
-
----
-
-## Changes Made:
-
-1. ✅ **Removed captions and dates** - No more caption area
-2. ✅ **Simplified configuration** - Just list filenames in one array
-3. ✅ **Auto-detects media type** - Based on file extension
-4. ✅ **Cleaner polaroid** - Just hearts decoration, no text
-5. ✅ **Error handling** - Shows placeholder if file not found
-6. ✅ **Initial confetti** - Celebration effect on page load
-7. ✅ **All effects preserved** - Hearts burst, sparkles, tilt, swipe

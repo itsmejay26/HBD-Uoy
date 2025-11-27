@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -28,29 +27,63 @@
             justify-content: center;
             position: relative;
             padding: 20px;
+            padding-top: 80px;
+        }
+
+        /* Animated background gradient */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #D4E6C3 0%, #B5D4A3 50%, #9BC484 100%);
+            z-index: -2;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 20% 50%, rgba(168, 230, 207, 0.4) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(123, 200, 156, 0.3) 0%, transparent 40%),
+                        radial-gradient(circle at 40% 80%, rgba(91, 163, 122, 0.3) 0%, transparent 50%);
+            animation: bgMove 20s linear infinite;
+        }
+
+        @keyframes bgMove {
+            0% { transform: translate(0, 0); }
+            50% { transform: translate(-25%, -25%); }
+            100% { transform: translate(0, 0); }
         }
 
         /* Floating decorations */
         .floating-deco {
             position: fixed;
             font-size: 2rem;
-            opacity: 0.25;
+            opacity: 0.3;
             z-index: 0;
-            animation: float-deco 6s ease-in-out infinite;
+            animation: float-deco 8s ease-in-out infinite;
             pointer-events: none;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
         }
 
         @keyframes float-deco {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(10deg); }
+            0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+            25% { transform: translateY(-15px) rotate(5deg) scale(1.05); }
+            50% { transform: translateY(-25px) rotate(0deg) scale(1); }
+            75% { transform: translateY(-10px) rotate(-5deg) scale(1.05); }
         }
 
-        .floating-deco:nth-child(1) { top: 8%; left: 5%; animation-delay: 0s; }
-        .floating-deco:nth-child(2) { top: 15%; right: 8%; animation-delay: 1s; }
-        .floating-deco:nth-child(3) { bottom: 15%; left: 8%; animation-delay: 2s; }
-        .floating-deco:nth-child(4) { bottom: 25%; right: 5%; animation-delay: 0.5s; }
-        .floating-deco:nth-child(5) { top: 45%; left: 3%; animation-delay: 1.5s; }
-        .floating-deco:nth-child(6) { top: 55%; right: 3%; animation-delay: 2.5s; }
+        .floating-deco:nth-child(1) { top: 8%; left: 5%; animation-delay: 0s; font-size: 1.8rem; }
+        .floating-deco:nth-child(2) { top: 12%; right: 8%; animation-delay: 1s; font-size: 2.2rem; }
+        .floating-deco:nth-child(3) { bottom: 18%; left: 8%; animation-delay: 2s; font-size: 1.6rem; }
+        .floating-deco:nth-child(4) { bottom: 28%; right: 5%; animation-delay: 0.5s; font-size: 2rem; }
+        .floating-deco:nth-child(5) { top: 45%; left: 3%; animation-delay: 1.5s; font-size: 1.4rem; }
+        .floating-deco:nth-child(6) { top: 55%; right: 3%; animation-delay: 2.5s; font-size: 1.8rem; }
 
         /* Sparkle container */
         .sparkle-container {
@@ -66,17 +99,63 @@
 
         .sparkle {
             position: absolute;
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
             background: #fff;
             border-radius: 50%;
-            box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.8);
-            animation: sparkle-twinkle 2s infinite;
+            box-shadow: 0 0 15px 3px rgba(255, 255, 255, 0.9),
+                        0 0 30px 6px rgba(168, 230, 207, 0.5);
+            animation: sparkle-twinkle 2.5s infinite;
         }
 
         @keyframes sparkle-twinkle {
-            0%, 100% { opacity: 0; transform: scale(0); }
-            50% { opacity: 1; transform: scale(1); }
+            0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1) rotate(180deg); }
+        }
+
+        /* Glowing orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(40px);
+            opacity: 0.3;
+            z-index: 1;
+            animation: orbFloat 15s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .orb-1 {
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(168, 230, 207, 0.8) 0%, transparent 70%);
+            top: 10%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, rgba(123, 200, 156, 0.8) 0%, transparent 70%);
+            bottom: 20%;
+            right: 10%;
+            animation-delay: 5s;
+        }
+
+        .orb-3 {
+            width: 180px;
+            height: 180px;
+            background: radial-gradient(circle, rgba(255, 182, 193, 0.6) 0%, transparent 70%);
+            top: 50%;
+            right: 20%;
+            animation-delay: 10s;
+        }
+
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -30px) scale(1.1); }
+            50% { transform: translate(-20px, 20px) scale(0.9); }
+            75% { transform: translate(20px, 30px) scale(1.05); }
         }
 
         /* Back button */
@@ -91,8 +170,9 @@
             border-radius: 50%;
             font-size: 1.5rem;
             cursor: pointer;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-            transition: all 0.3s;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15),
+                        0 0 0 3px rgba(123, 200, 156, 0.2);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             z-index: 100;
             display: flex;
             align-items: center;
@@ -100,8 +180,9 @@
         }
 
         .back-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            transform: scale(1.15) rotate(-5deg);
+            box-shadow: 0 8px 35px rgba(0, 0, 0, 0.2),
+                        0 0 0 5px rgba(123, 200, 156, 0.3);
         }
 
         .back-btn:active {
@@ -113,7 +194,7 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             padding: 10px 15px;
             border-radius: 25px;
             display: none;
@@ -121,9 +202,14 @@
             gap: 8px;
             font-size: 0.8rem;
             color: #2D5A27;
-            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 3px 20px rgba(0, 0, 0, 0.1);
             z-index: 100;
             cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .music-indicator:hover {
+            transform: scale(1.05);
         }
 
         .music-indicator.show {
@@ -139,7 +225,7 @@
 
         .music-bar {
             width: 3px;
-            background: #7BC89C;
+            background: linear-gradient(to top, #7BC89C, #5BA37A);
             border-radius: 2px;
             animation: music-bar 0.5s infinite alternate;
         }
@@ -161,139 +247,260 @@
         /* Title */
         .page-title {
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             z-index: 10;
             opacity: 0;
-            animation: fadeDown 0.8s 0.3s forwards;
+            animation: titleReveal 1s 0.3s forwards;
         }
 
-        @keyframes fadeDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes titleReveal {
+            0% { opacity: 0; transform: translateY(-30px) scale(0.9); filter: blur(10px); }
+            100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
         }
 
         .page-title h1 {
             font-size: 1.6rem;
             color: #2D5A27;
             font-weight: bold;
-            text-shadow: 0 2px 10px rgba(255, 255, 255, 0.5);
+            text-shadow: 0 2px 15px rgba(255, 255, 255, 0.7);
+            letter-spacing: 1px;
         }
 
         .page-title .subtitle {
             font-size: 0.9rem;
             color: #5BA37A;
             margin-top: 5px;
+            opacity: 0.9;
         }
 
         /* Main gallery container */
         .gallery-wrapper {
             width: 100%;
-            max-width: 400px;
+            max-width: 380px;
             z-index: 10;
             opacity: 0;
-            animation: scaleIn 0.6s 0.5s forwards;
+            animation: galleryReveal 0.8s 0.6s forwards;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        @keyframes scaleIn {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
+        @keyframes galleryReveal {
+            0% { opacity: 0; transform: scale(0.8) rotateX(20deg); }
+            100% { opacity: 1; transform: scale(1) rotateX(0deg); }
         }
 
-        /* Polaroid frame */
+        /* Polaroid frame - Dynamic sizing */
         .polaroid-frame {
-            background: #fff;
-            padding: 15px;
-            border-radius: 5px;
+            background: linear-gradient(145deg, #ffffff 0%, #f8f8f8 100%);
+            padding: 12px;
+            padding-bottom: 12px;
+            border-radius: 6px;
             box-shadow: 
-                0 20px 60px rgba(0, 0, 0, 0.25),
-                0 0 0 1px rgba(0, 0, 0, 0.05);
+                0 25px 80px rgba(0, 0, 0, 0.25),
+                0 15px 35px rgba(0, 0, 0, 0.15),
+                0 5px 15px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.05);
             position: relative;
             transform: rotate(-2deg);
-            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            max-width: 90vw;
+            max-height: 55vh;
+        }
+
+        .polaroid-frame.animating {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .polaroid-frame.tilt-left {
-            transform: rotate(-4deg);
+            transform: rotate(-6deg) scale(0.98);
         }
 
         .polaroid-frame.tilt-right {
-            transform: rotate(4deg);
+            transform: rotate(6deg) scale(0.98);
         }
 
+        .polaroid-frame.pop {
+            animation: polaroidPop 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes polaroidPop {
+            0% { transform: rotate(-2deg) scale(1); }
+            30% { transform: rotate(0deg) scale(1.08); }
+            60% { transform: rotate(-3deg) scale(0.97); }
+            100% { transform: rotate(-2deg) scale(1); }
+        }
+
+        /* Tape decoration */
         .polaroid-frame::before {
             content: '';
             position: absolute;
-            top: 8px;
+            top: -12px;
             left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 25px;
-            background: linear-gradient(135deg, rgba(200, 180, 150, 0.6) 0%, rgba(180, 160, 130, 0.4) 100%);
+            transform: translateX(-50%) rotate(-2deg);
+            width: 70px;
+            height: 28px;
+            background: linear-gradient(135deg, 
+                rgba(210, 190, 160, 0.85) 0%, 
+                rgba(190, 170, 140, 0.75) 50%,
+                rgba(180, 160, 130, 0.7) 100%);
             border-radius: 3px;
             z-index: 20;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
-        /* Media container */
-        .media-container {
-            width: 100%;
-            aspect-ratio: 4/5;
-            background: #1a1a1a;
-            border-radius: 3px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .media-item {
+        .polaroid-frame::after {
+            content: '';
             position: absolute;
             top: 0;
             left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 6px;
+            pointer-events: none;
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.03);
+        }
+
+        /* Media container - Dynamic aspect ratio */
+        .media-container {
             width: 100%;
-            height: 100%;
+            background: #0a0a0a;
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .media-item {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
             object-fit: contain;
-            background: #1a1a1a;
-            opacity: 0;
-            transition: opacity 0.5s ease, transform 0.5s ease;
+            background: #0a0a0a;
+            display: block;
         }
 
-        .media-item.active {
-            opacity: 1;
-            z-index: 10;
+        /* Enhanced slide animations */
+        .media-item.entering {
+            position: absolute;
         }
 
-        .media-item.slide-left {
-            animation: slideOutLeft 0.5s forwards;
+        .media-item.exiting {
+            position: absolute;
         }
 
-        .media-item.slide-right {
-            animation: slideOutRight 0.5s forwards;
+        /* Slide Left (Next) */
+        .media-item.slide-out-left {
+            animation: slideOutLeft 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
 
-        .media-item.slide-in-left {
-            animation: slideInFromRight 0.5s forwards;
+        .media-item.slide-in-from-right {
+            animation: slideInFromRight 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
 
-        .media-item.slide-in-right {
-            animation: slideInFromLeft 0.5s forwards;
+        /* Slide Right (Prev) */
+        .media-item.slide-out-right {
+            animation: slideOutRight 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .media-item.slide-in-from-left {
+            animation: slideInFromLeft 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
 
         @keyframes slideOutLeft {
-            from { transform: translateX(0) scale(1); opacity: 1; }
-            to { transform: translateX(-100%) scale(0.8); opacity: 0; }
+            0% { 
+                transform: translateX(0) scale(1) rotateY(0deg); 
+                opacity: 1; 
+                filter: blur(0);
+            }
+            100% { 
+                transform: translateX(-120%) scale(0.7) rotateY(-30deg); 
+                opacity: 0; 
+                filter: blur(5px);
+            }
         }
 
         @keyframes slideOutRight {
-            from { transform: translateX(0) scale(1); opacity: 1; }
-            to { transform: translateX(100%) scale(0.8); opacity: 0; }
+            0% { 
+                transform: translateX(0) scale(1) rotateY(0deg); 
+                opacity: 1; 
+                filter: blur(0);
+            }
+            100% { 
+                transform: translateX(120%) scale(0.7) rotateY(30deg); 
+                opacity: 0; 
+                filter: blur(5px);
+            }
         }
 
         @keyframes slideInFromRight {
-            from { transform: translateX(100%) scale(0.8); opacity: 0; }
-            to { transform: translateX(0) scale(1); opacity: 1; }
+            0% { 
+                transform: translateX(120%) scale(0.7) rotateY(30deg); 
+                opacity: 0; 
+                filter: blur(5px);
+            }
+            100% { 
+                transform: translateX(0) scale(1) rotateY(0deg); 
+                opacity: 1; 
+                filter: blur(0);
+            }
         }
 
         @keyframes slideInFromLeft {
-            from { transform: translateX(-100%) scale(0.8); opacity: 0; }
-            to { transform: translateX(0) scale(1); opacity: 1; }
+            0% { 
+                transform: translateX(-120%) scale(0.7) rotateY(-30deg); 
+                opacity: 0; 
+                filter: blur(5px);
+            }
+            100% { 
+                transform: translateX(0) scale(1) rotateY(0deg); 
+                opacity: 1; 
+                filter: blur(0);
+            }
+        }
+
+        /* Flip animation for variety */
+        .media-item.flip-out {
+            animation: flipOut 0.5s ease-in forwards;
+        }
+
+        .media-item.flip-in {
+            animation: flipIn 0.5s ease-out forwards;
+        }
+
+        @keyframes flipOut {
+            0% { transform: perspective(1000px) rotateY(0deg); opacity: 1; }
+            100% { transform: perspective(1000px) rotateY(-90deg); opacity: 0; }
+        }
+
+        @keyframes flipIn {
+            0% { transform: perspective(1000px) rotateY(90deg); opacity: 0; }
+            100% { transform: perspective(1000px) rotateY(0deg); opacity: 1; }
+        }
+
+        /* Zoom fade animation */
+        .media-item.zoom-out {
+            animation: zoomOut 0.5s ease-in forwards;
+        }
+
+        .media-item.zoom-in {
+            animation: zoomIn 0.5s ease-out forwards;
+        }
+
+        @keyframes zoomOut {
+            0% { transform: scale(1); opacity: 1; filter: blur(0); }
+            100% { transform: scale(1.3); opacity: 0; filter: blur(8px); }
+        }
+
+        @keyframes zoomIn {
+            0% { transform: scale(0.5); opacity: 0; filter: blur(8px); }
+            100% { transform: scale(1); opacity: 1; filter: blur(0); }
         }
 
         /* Loading spinner */
@@ -304,44 +511,63 @@
             transform: translate(-50%, -50%);
             width: 50px;
             height: 50px;
-            border: 4px solid rgba(255, 255, 255, 0.2);
-            border-top-color: #7BC89C;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
             z-index: 5;
         }
 
-        @keyframes spin {
-            to { transform: translate(-50%, -50%) rotate(360deg); }
+        .loading-spinner::before,
+        .loading-spinner::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+        }
+
+        .loading-spinner::before {
+            width: 100%;
+            height: 100%;
+            border: 4px solid rgba(123, 200, 156, 0.2);
+        }
+
+        .loading-spinner::after {
+            width: 100%;
+            height: 100%;
+            border: 4px solid transparent;
+            border-top-color: #7BC89C;
+            animation: spinLoader 1s linear infinite;
+        }
+
+        @keyframes spinLoader {
+            to { transform: rotate(360deg); }
         }
 
         .loading-spinner.hidden {
             display: none;
         }
 
-        /* Heart decoration on polaroid */
+        /* Heart decorations */
         .heart-deco {
             position: absolute;
-            bottom: 10px;
-            right: 15px;
-            font-size: 1.3rem;
-            opacity: 0.6;
-            animation: heartBeat 1.5s infinite;
+            bottom: 8px;
+            right: 12px;
+            font-size: 1.2rem;
+            opacity: 0.7;
+            animation: heartFloat 2s ease-in-out infinite;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
         }
 
         .heart-deco-left {
             position: absolute;
-            bottom: 10px;
-            left: 15px;
-            font-size: 1.3rem;
-            opacity: 0.6;
-            animation: heartBeat 1.5s infinite;
-            animation-delay: 0.3s;
+            bottom: 8px;
+            left: 12px;
+            font-size: 1.2rem;
+            opacity: 0.7;
+            animation: heartFloat 2s ease-in-out infinite;
+            animation-delay: 0.5s;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
         }
 
-        @keyframes heartBeat {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
+        @keyframes heartFloat {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-5px) scale(1.15); }
         }
 
         /* Navigation controls */
@@ -355,24 +581,47 @@
         }
 
         .nav-btn {
-            width: 55px;
-            height: 55px;
+            width: 58px;
+            height: 58px;
             border-radius: 50%;
             border: none;
-            background: linear-gradient(135deg, #fff 0%, #f5f5f5 100%);
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+            background: linear-gradient(145deg, #ffffff 0%, #f0f0f0 100%);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15),
+                        0 3px 10px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.8);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            transition: all 0.3s;
+            font-size: 1.4rem;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             color: #2D5A27;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, rgba(123, 200, 156, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.4s;
+        }
+
+        .nav-btn:hover::before {
+            width: 150%;
+            height: 150%;
         }
 
         .nav-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            transform: scale(1.15);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2),
+                        0 5px 15px rgba(123, 200, 156, 0.3);
         }
 
         .nav-btn:active {
@@ -380,58 +629,106 @@
         }
 
         .nav-btn:disabled {
-            opacity: 0.4;
+            opacity: 0.35;
             cursor: not-allowed;
             transform: none;
+        }
+
+        .nav-btn:disabled:hover::before {
+            width: 0;
+            height: 0;
         }
 
         .nav-btn.prev { padding-right: 4px; }
         .nav-btn.next { padding-left: 4px; }
 
+        /* Ripple effect on click */
+        .nav-btn.ripple::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(123, 200, 156, 0.4);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: rippleEffect 0.6s ease-out;
+        }
+
+        @keyframes rippleEffect {
+            to { transform: scale(2.5); opacity: 0; }
+        }
+
         /* Counter */
         .counter {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 10px 25px;
-            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 12px 28px;
+            border-radius: 30px;
             font-size: 1rem;
             font-weight: bold;
             color: #2D5A27;
-            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
-            min-width: 80px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            min-width: 90px;
             text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .counter::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(123, 200, 156, 0.2), transparent);
+            animation: counterShine 3s infinite;
+        }
+
+        @keyframes counterShine {
+            0% { left: -100%; }
+            50%, 100% { left: 100%; }
         }
 
         .counter .current {
             color: #5BA37A;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
         }
 
         /* Progress bar */
         .progress-bar {
             width: 100%;
-            max-width: 400px;
-            height: 4px;
+            max-width: 380px;
+            height: 5px;
             background: rgba(255, 255, 255, 0.5);
-            border-radius: 2px;
+            border-radius: 3px;
             margin-top: 20px;
             overflow: hidden;
             z-index: 10;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #7BC89C 0%, #5BA37A 100%);
-            border-radius: 2px;
-            transition: width 0.3s ease;
+            background: linear-gradient(90deg, #7BC89C 0%, #5BA37A 50%, #7BC89C 100%);
+            background-size: 200% 100%;
+            border-radius: 3px;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: progressGradient 2s linear infinite;
+            box-shadow: 0 0 10px rgba(123, 200, 156, 0.5);
+        }
+
+        @keyframes progressGradient {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
         }
 
         /* Thumbnail strip */
         .thumbnail-strip {
             display: flex;
-            gap: 8px;
+            gap: 10px;
             margin-top: 20px;
             overflow-x: auto;
-            padding: 10px 5px;
+            padding: 12px 8px;
             max-width: 100%;
             z-index: 10;
             scrollbar-width: none;
@@ -443,22 +740,29 @@
         }
 
         .thumbnail {
-            width: 50px;
-            height: 50px;
-            border-radius: 8px;
+            width: 52px;
+            height: 52px;
+            border-radius: 10px;
             overflow: hidden;
             flex-shrink: 0;
             cursor: pointer;
             border: 3px solid transparent;
-            transition: all 0.3s;
-            background: #ddd;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            background: linear-gradient(135deg, #e0e0e0 0%, #c0c0c0 100%);
             position: relative;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
         }
 
         .thumbnail.active {
             border-color: #5BA37A;
-            transform: scale(1.1);
-            box-shadow: 0 3px 15px rgba(91, 163, 122, 0.4);
+            transform: scale(1.15);
+            box-shadow: 0 5px 20px rgba(91, 163, 122, 0.5),
+                        0 0 0 3px rgba(91, 163, 122, 0.2);
+        }
+
+        .thumbnail:hover:not(.active) {
+            transform: scale(1.08);
+            border-color: rgba(91, 163, 122, 0.5);
         }
 
         .thumbnail img,
@@ -473,16 +777,16 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             color: #fff;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-            background: rgba(0,0,0,0.4);
-            width: 24px;
-            height: 24px;
+            background: rgba(0, 0, 0, 0.6);
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            backdrop-filter: blur(2px);
         }
 
         /* Hearts burst effect */
@@ -501,61 +805,98 @@
             position: absolute;
             font-size: 1.5rem;
             opacity: 0;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
         }
 
         .burst-heart.animate {
-            animation: heartBurst 1.5s forwards ease-out;
+            animation: heartBurstEnhanced 1.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
         }
 
-        @keyframes heartBurst {
+        @keyframes heartBurstEnhanced {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0) rotate(0deg);
+            }
+            20% {
+                opacity: 1;
+                transform: translate(calc(var(--tx) * 0.3), calc(var(--ty) * 0.3)) scale(1.3) rotate(var(--rot));
+            }
+            100% {
+                opacity: 0;
+                transform: translate(calc(var(--tx) * 1.5), calc(var(--ty) * 1.8)) scale(0.3) rotate(calc(var(--rot) * 2));
+            }
+        }
+
+        /* Particle explosion */
+        .particle-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 180;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0;
+        }
+
+        .particle.animate {
+            animation: particleExplode 1.2s ease-out forwards;
+        }
+
+        @keyframes particleExplode {
             0% {
                 opacity: 1;
                 transform: translate(-50%, -50%) scale(0);
             }
             50% {
-                opacity: 1;
-                transform: translate(var(--tx), var(--ty)) scale(1.2);
+                opacity: 0.8;
             }
             100% {
                 opacity: 0;
-                transform: translate(calc(var(--tx) * 1.5), calc(var(--ty) * 1.5)) scale(0.5);
+                transform: translate(var(--px), var(--py)) scale(1);
             }
         }
 
         /* Swipe hint */
         .swipe-hint {
             position: fixed;
-            bottom: 30px;
+            bottom: 25px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.95);
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 0.85rem;
             color: #5BA37A;
-            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.12);
             z-index: 50;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             opacity: 0;
-            animation: fadeInOut 4s 1s forwards;
+            animation: hintReveal 5s 1.5s forwards;
         }
 
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
-            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            85% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            100% { opacity: 0; transform: translateX(-50%) translateY(-10px); display: none; }
+        @keyframes hintReveal {
+            0% { opacity: 0; transform: translateX(-50%) translateY(30px); }
+            10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            90% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-20px); pointer-events: none; }
         }
 
         .swipe-icon {
-            animation: swipeHand 1s infinite;
+            animation: swipeMotion 1.5s infinite;
         }
 
-        @keyframes swipeHand {
+        @keyframes swipeMotion {
             0%, 100% { transform: translateX(0); }
-            50% { transform: translateX(10px); }
+            50% { transform: translateX(12px); }
         }
 
         /* Empty state */
@@ -565,33 +906,34 @@
             align-items: center;
             justify-content: center;
             height: 100%;
+            min-height: 300px;
             text-align: center;
             padding: 40px 20px;
             color: #5BA37A;
         }
 
         .empty-state .icon {
-            font-size: 4rem;
-            margin-bottom: 15px;
-            opacity: 0.5;
-            animation: bounce 2s infinite;
+            font-size: 5rem;
+            margin-bottom: 20px;
+            opacity: 0.6;
+            animation: emptyBounce 2s infinite;
         }
 
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+        @keyframes emptyBounce {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
         }
 
         .empty-state h3 {
-            font-size: 1.2rem;
-            margin-bottom: 10px;
+            font-size: 1.3rem;
+            margin-bottom: 12px;
             color: #2D5A27;
         }
 
         .empty-state p {
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             opacity: 0.8;
-            line-height: 1.5;
+            line-height: 1.6;
         }
 
         /* Confetti burst */
@@ -608,23 +950,92 @@
 
         .confetti {
             position: absolute;
-            width: 10px;
-            height: 10px;
             top: -20px;
             opacity: 0;
         }
 
         .confetti.fall {
-            animation: confettiFall 3s forwards ease-out;
+            animation: confettiFallEnhanced 4s forwards ease-out;
         }
 
-        @keyframes confettiFall {
-            0% { opacity: 1; top: -20px; transform: rotate(0deg) translateX(0); }
-            100% { opacity: 0; top: 100vh; transform: rotate(720deg) translateX(100px); }
+        @keyframes confettiFallEnhanced {
+            0% { 
+                opacity: 1; 
+                top: -20px; 
+                transform: rotate(0deg) translateX(0) scale(1); 
+            }
+            25% {
+                transform: rotate(180deg) translateX(30px) scale(1.1);
+            }
+            50% {
+                transform: rotate(360deg) translateX(-20px) scale(0.9);
+            }
+            75% {
+                transform: rotate(540deg) translateX(25px) scale(1);
+            }
+            100% { 
+                opacity: 0; 
+                top: 110vh; 
+                transform: rotate(720deg) translateX(-30px) scale(0.5); 
+            }
+        }
+
+        /* Flash effect on transition */
+        .flash-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 300;
+        }
+
+        .flash-overlay.flash {
+            animation: flashEffect 0.3s ease-out;
+        }
+
+        @keyframes flashEffect {
+            0% { opacity: 0; }
+            30% { opacity: 0.15; }
+            100% { opacity: 0; }
+        }
+
+        /* Media transition glow */
+        .glow-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            border: 3px solid rgba(123, 200, 156, 0.6);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 25;
+        }
+
+        .glow-ring.expand {
+            animation: glowExpand 0.8s ease-out forwards;
+        }
+
+        @keyframes glowExpand {
+            0% { width: 0; height: 0; opacity: 1; }
+            100% { width: 300px; height: 300px; opacity: 0; }
         }
     </style>
 </head>
 <body>
+    <!-- Animated background -->
+    <div class="bg-animation"></div>
+
+    <!-- Glowing orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
     <!-- Floating decorations -->
     <div class="floating-deco">📷</div>
     <div class="floating-deco">💕</div>
@@ -639,8 +1050,14 @@
     <!-- Hearts burst container -->
     <div class="hearts-burst" id="heartsBurst"></div>
 
+    <!-- Particle container -->
+    <div class="particle-container" id="particleContainer"></div>
+
     <!-- Confetti container -->
     <div class="confetti-container" id="confettiContainer"></div>
+
+    <!-- Flash overlay -->
+    <div class="flash-overlay" id="flashOverlay"></div>
 
     <!-- Back button -->
     <button class="back-btn" onclick="goBack()">←</button>
@@ -653,7 +1070,7 @@
             <div class="music-bar"></div>
             <div class="music-bar"></div>
         </div>
-        <span>Music Playing</span>
+        <span>Music</span>
     </div>
 
     <!-- Title -->
@@ -663,11 +1080,11 @@
     </div>
 
     <!-- Gallery wrapper -->
-    <div class="gallery-wrapper">
+    <div class="gallery-wrapper" id="galleryWrapper">
         <div class="polaroid-frame" id="polaroidFrame">
             <div class="media-container" id="mediaContainer">
                 <div class="loading-spinner" id="loadingSpinner"></div>
-                <!-- Media items will be inserted here -->
+                <div class="glow-ring" id="glowRing"></div>
             </div>
             <div class="heart-deco-left">💕</div>
             <div class="heart-deco">💖</div>
@@ -696,7 +1113,7 @@
     <!-- Swipe hint -->
     <div class="swipe-hint" id="swipeHint">
         <span class="swipe-icon">👆</span>
-        <span>Swipe or tap arrows to navigate</span>
+        <span>Swipe or tap arrows</span>
     </div>
 
     <!-- Background music -->
@@ -706,64 +1123,59 @@
 
     <script>
         // ==================== CONFIGURATION ====================
-        // List your media files here - just the filenames!
-        // The script will automatically detect if it's an image or video
-        // Put all your files in the 'memories' folder
-        
         const mediaFiles = [
-  'IMG_20251127_224021_533.jpg',
-  'VID_20251127_063516_744.mp4',
-  'VID_20251127_064003_722.mp4',
-  'IMG_20251127_224310_383.jpg',
-  'IMG_20251127_223823_089.jpg',
-  'VID_20251127_064110_636.mp4',
-  'IMG_20251127_223953_967.jpg',
-  'IMG_20251127_223532_272.jpg',
-  'VID_20251127_063644_932.mp4',
-  'VID_20251127_063949_903.mp4',
-  'IMG_20251127_224211_716.jpg',
-  'IMG_20251127_224216_679.jpg',
-  'VID_20251127_063741_667.mp4',
-  'IMG_20251127_223929_780.jpg',
-  'IMG_20251127_224122_419.jpg',
-  'VID_20251127_064107_022.mp4',
-  'IMG_20251127_223530_669.jpg',
-  'IMG_20251127_223616_334.jpg',
-  'VID_20251127_064322_284.mp4',
-  'IMG_20251127_224044_261.jpg',
-  'VID_20251127_064328_044.mp4',
-  'VID_20251127_064336_470.mp4',
-  'VID_20251127_063318_533.mp4',
-  'IMG_20251127_224240_054.jpg'
-];
-
+            'IMG_20251127_224021_533.jpg',
+            'VID_20251127_063516_744.mp4',
+            'VID_20251127_064003_722.mp4',
+            'IMG_20251127_224310_383.jpg',
+            'IMG_20251127_223823_089.jpg',
+            'VID_20251127_064110_636.mp4',
+            'IMG_20251127_223953_967.jpg',
+            'IMG_20251127_223532_272.jpg',
+            'VID_20251127_063644_932.mp4',
+            'VID_20251127_063949_903.mp4',
+            'IMG_20251127_224211_716.jpg',
+            'IMG_20251127_224216_679.jpg',
+            'VID_20251127_063741_667.mp4',
+            'IMG_20251127_223929_780.jpg',
+            'IMG_20251127_224122_419.jpg',
+            'VID_20251127_064107_022.mp4',
+            'IMG_20251127_223530_669.jpg',
+            'IMG_20251127_223616_334.jpg',
+            'VID_20251127_064322_284.mp4',
+            'IMG_20251127_224044_261.jpg',
+            'VID_20251127_064328_044.mp4',
+            'VID_20251127_064336_470.mp4',
+            'VID_20251127_063318_533.mp4',
+            'IMG_20251127_224240_054.jpg'
+        ];
         
-        // Folder path
         const MEDIA_FOLDER = 'memories/';
         // ==============================================================
 
-        // Image and video extensions
         const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
         const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'ogg'];
 
-        // Build media items array automatically
         const mediaItems = mediaFiles.map(filename => {
             const ext = filename.split('.').pop().toLowerCase();
             const type = imageExtensions.includes(ext) ? 'image' : 
                          videoExtensions.includes(ext) ? 'video' : 'image';
-            return {
-                type: type,
-                src: MEDIA_FOLDER + filename
-            };
+            return { type, src: MEDIA_FOLDER + filename };
         });
+
+        // Animation types for variety
+        const animationTypes = ['slide', 'flip', 'zoom'];
+        let currentAnimationType = 0;
 
         let currentIndex = 0;
         let touchStartX = 0;
         let touchEndX = 0;
         let isAnimating = false;
 
+        // DOM elements
         const mediaContainer = document.getElementById('mediaContainer');
         const polaroidFrame = document.getElementById('polaroidFrame');
+        const galleryWrapper = document.getElementById('galleryWrapper');
         const currentNum = document.getElementById('currentNum');
         const totalNum = document.getElementById('totalNum');
         const progressFill = document.getElementById('progressFill');
@@ -772,14 +1184,16 @@
         const nextBtn = document.getElementById('nextBtn');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const heartsBurst = document.getElementById('heartsBurst');
+        const particleContainer = document.getElementById('particleContainer');
         const confettiContainer = document.getElementById('confettiContainer');
+        const flashOverlay = document.getElementById('flashOverlay');
+        const glowRing = document.getElementById('glowRing');
         const bgMusic = document.getElementById('bgMusic');
         const musicIndicator = document.getElementById('musicIndicator');
         const sparkleContainer = document.getElementById('sparkleContainer');
 
         // Initialize
         window.addEventListener('load', () => {
-            // Music handling
             const musicPlaying = localStorage.getItem('musicPlaying');
             const musicTime = localStorage.getItem('musicTime');
             
@@ -790,21 +1204,17 @@
                 }).catch(() => {});
             }
 
-            // Initialize gallery
             if (mediaItems.length > 0) {
                 initGallery();
-                // Initial confetti burst
-                setTimeout(triggerConfetti, 800);
+                setTimeout(triggerConfetti, 1000);
             } else {
                 showEmptyState();
             }
 
-            // Start sparkles
             createSparkles();
-            setInterval(createSparkles, 2000);
+            setInterval(createSparkles, 2500);
         });
 
-        // Music indicator click
         musicIndicator.addEventListener('click', () => {
             if (bgMusic.paused) {
                 bgMusic.play();
@@ -817,7 +1227,6 @@
             }
         });
 
-        // Save music time periodically
         setInterval(() => {
             if (!bgMusic.paused) {
                 localStorage.setItem('musicTime', bgMusic.currentTime);
@@ -842,7 +1251,9 @@
                     const img = document.createElement('img');
                     img.src = item.src;
                     img.alt = `Memory ${index + 1}`;
-                    img.onerror = () => { img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23ddd" width="100" height="100"/><text x="50" y="55" text-anchor="middle" fill="%23999" font-size="12">?</text></svg>'; };
+                    img.onerror = () => { 
+                        img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23ddd" width="100" height="100"/><text x="50" y="55" text-anchor="middle" fill="%23999" font-size="14">?</text></svg>'; 
+                    };
                     thumb.appendChild(img);
                 } else {
                     const video = document.createElement('video');
@@ -869,14 +1280,10 @@
             const item = mediaItems[index];
             loadingSpinner.classList.remove('hidden');
 
-            // Get current active media
-            const currentMedia = mediaContainer.querySelector('.media-item.active');
-
-            // Pause any playing videos
+            const currentMedia = mediaContainer.querySelector('.media-item:not(.exiting)');
             const playingVideos = mediaContainer.querySelectorAll('video');
             playingVideos.forEach(v => v.pause());
 
-            // Create new media element
             let newMedia;
             if (item.type === 'image') {
                 newMedia = document.createElement('img');
@@ -892,61 +1299,94 @@
             
             newMedia.className = 'media-item';
 
-            // Handle load
             const onLoad = () => {
                 loadingSpinner.classList.add('hidden');
 
-                // Animate current media out
+                // Get dimensions for dynamic aspect ratio
+                let mediaWidth, mediaHeight;
+                if (item.type === 'image') {
+                    mediaWidth = newMedia.naturalWidth;
+                    mediaHeight = newMedia.naturalHeight;
+                } else {
+                    mediaWidth = newMedia.videoWidth || 16;
+                    mediaHeight = newMedia.videoHeight || 9;
+                }
+
+                // Calculate and apply aspect ratio
+                const aspectRatio = mediaWidth / mediaHeight;
+                updatePolaroidSize(aspectRatio);
+
+                // Determine animation type
+                const animType = animationTypes[currentAnimationType % animationTypes.length];
+                if (direction !== 'none') {
+                    currentAnimationType++;
+                }
+
+                // Animate out current media
                 if (currentMedia && direction !== 'none') {
-                    if (direction === 'left') {
-                        currentMedia.classList.add('slide-left');
+                    currentMedia.classList.add('exiting');
+                    
+                    if (animType === 'slide') {
+                        currentMedia.classList.add(direction === 'left' ? 'slide-out-left' : 'slide-out-right');
+                    } else if (animType === 'flip') {
+                        currentMedia.classList.add('flip-out');
                     } else {
-                        currentMedia.classList.add('slide-right');
+                        currentMedia.classList.add('zoom-out');
                     }
-                    setTimeout(() => currentMedia.remove(), 500);
+                    
+                    setTimeout(() => currentMedia.remove(), 600);
                 } else if (currentMedia) {
                     currentMedia.remove();
                 }
 
-                // Add and animate new media in
+                // Add new media with animation
+                newMedia.classList.add('entering');
                 mediaContainer.appendChild(newMedia);
-                
-                if (direction === 'left') {
-                    newMedia.classList.add('slide-in-left');
-                } else if (direction === 'right') {
-                    newMedia.classList.add('slide-in-right');
+
+                if (direction !== 'none') {
+                    if (animType === 'slide') {
+                        newMedia.classList.add(direction === 'left' ? 'slide-in-from-right' : 'slide-in-from-left');
+                    } else if (animType === 'flip') {
+                        newMedia.classList.add('flip-in');
+                    } else {
+                        newMedia.classList.add('zoom-in');
+                    }
                 }
-                
+
                 setTimeout(() => {
-                    newMedia.classList.add('active');
-                    newMedia.classList.remove('slide-in-left', 'slide-in-right');
-                }, 50);
+                    newMedia.classList.remove('entering', 'slide-in-from-right', 'slide-in-from-left', 'flip-in', 'zoom-in');
+                }, 600);
+
+                // Trigger visual effects
+                if (direction !== 'none') {
+                    triggerFlash();
+                    triggerGlowRing();
+                    triggerPolaroidPop();
+                    triggerHeartsBurst();
+                    triggerParticles();
+                    addNavButtonRipple(direction);
+                    tiltPolaroid(direction);
+                }
 
                 // Update UI
                 currentNum.textContent = index + 1;
                 updateProgress();
                 updateThumbnails();
                 updateNavButtons();
-                tiltPolaroid(direction);
-
-                // Trigger effects on navigation
-                if (direction !== 'none') {
-                    triggerHeartsBurst();
-                }
 
                 setTimeout(() => {
                     isAnimating = false;
-                }, 500);
+                }, 650);
             };
 
             const onError = () => {
                 loadingSpinner.classList.add('hidden');
-                newMedia.className = 'media-item active';
                 
-                // Show error placeholder
                 if (item.type === 'image') {
-                    newMedia.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500"><rect fill="%231a1a1a" width="400" height="500"/><text x="200" y="250" text-anchor="middle" fill="%23666" font-size="20">📷 Image not found</text></svg>';
+                    newMedia.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect fill="%230a0a0a" width="400" height="300"/><text x="200" y="150" text-anchor="middle" fill="%23666" font-size="18">📷 Not found</text></svg>';
                 }
+                
+                updatePolaroidSize(4/3);
                 
                 if (currentMedia) currentMedia.remove();
                 mediaContainer.appendChild(newMedia);
@@ -962,21 +1402,76 @@
                 newMedia.onload = onLoad;
                 newMedia.onerror = onError;
             } else {
-                newMedia.onloadeddata = onLoad;
+                newMedia.onloadedmetadata = onLoad;
                 newMedia.onerror = onError;
             }
         }
 
+        function updatePolaroidSize(aspectRatio) {
+            const maxWidth = Math.min(380, window.innerWidth * 0.9);
+            const maxHeight = window.innerHeight * 0.45;
+            
+            let containerWidth, containerHeight;
+            
+            if (aspectRatio >= 1) {
+                // Landscape or square
+                containerWidth = maxWidth;
+                containerHeight = containerWidth / aspectRatio;
+                
+                if (containerHeight > maxHeight) {
+                    containerHeight = maxHeight;
+                    containerWidth = containerHeight * aspectRatio;
+                }
+            } else {
+                // Portrait
+                containerHeight = maxHeight;
+                containerWidth = containerHeight * aspectRatio;
+                
+                if (containerWidth > maxWidth) {
+                    containerWidth = maxWidth;
+                    containerHeight = containerWidth / aspectRatio;
+                }
+            }
+
+            mediaContainer.style.width = containerWidth + 'px';
+            mediaContainer.style.height = containerHeight + 'px';
+            mediaContainer.style.minHeight = 'unset';
+            
+            polaroidFrame.classList.add('animating');
+            setTimeout(() => {
+                polaroidFrame.classList.remove('animating');
+            }, 500);
+        }
+
+        function triggerFlash() {
+            flashOverlay.classList.add('flash');
+            setTimeout(() => flashOverlay.classList.remove('flash'), 300);
+        }
+
+        function triggerGlowRing() {
+            glowRing.classList.remove('expand');
+            void glowRing.offsetWidth;
+            glowRing.classList.add('expand');
+            setTimeout(() => glowRing.classList.remove('expand'), 800);
+        }
+
+        function triggerPolaroidPop() {
+            polaroidFrame.classList.add('pop');
+            setTimeout(() => polaroidFrame.classList.remove('pop'), 600);
+        }
+
         function tiltPolaroid(direction) {
             polaroidFrame.classList.remove('tilt-left', 'tilt-right');
-            if (direction === 'left') {
-                polaroidFrame.classList.add('tilt-right');
-            } else if (direction === 'right') {
-                polaroidFrame.classList.add('tilt-left');
-            }
+            polaroidFrame.classList.add(direction === 'left' ? 'tilt-right' : 'tilt-left');
             setTimeout(() => {
                 polaroidFrame.classList.remove('tilt-left', 'tilt-right');
-            }, 500);
+            }, 400);
+        }
+
+        function addNavButtonRipple(direction) {
+            const btn = direction === 'left' ? nextBtn : prevBtn;
+            btn.classList.add('ripple');
+            setTimeout(() => btn.classList.remove('ripple'), 600);
         }
 
         function nextMedia() {
@@ -1017,7 +1512,6 @@
                 thumb.classList.toggle('active', index === currentIndex);
             });
             
-            // Scroll active thumbnail into view
             const activeThumb = thumbs[currentIndex];
             if (activeThumb) {
                 activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
@@ -1025,70 +1519,118 @@
         }
 
         function triggerHeartsBurst() {
-            const hearts = ['💕', '💖', '💗', '💓', '❤️', '✨', '🌸'];
+            const hearts = ['💕', '💖', '💗', '💓', '❤️', '✨', '🌸', '💝', '💘'];
             const rect = polaroidFrame.getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
 
-            for (let i = 0; i < 10; i++) {
-                const heart = document.createElement('div');
-                heart.className = 'burst-heart';
-                heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
-                heart.style.left = centerX + 'px';
-                heart.style.top = centerY + 'px';
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    const heart = document.createElement('div');
+                    heart.className = 'burst-heart';
+                    heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+                    heart.style.left = centerX + 'px';
+                    heart.style.top = centerY + 'px';
+                    heart.style.fontSize = (1 + Math.random() * 1.5) + 'rem';
 
-                const angle = (i / 10) * Math.PI * 2;
-                const distance = 60 + Math.random() * 50;
-                heart.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
-                heart.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+                    const angle = (i / 15) * Math.PI * 2 + Math.random() * 0.5;
+                    const distance = 80 + Math.random() * 80;
+                    heart.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+                    heart.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+                    heart.style.setProperty('--rot', (Math.random() * 60 - 30) + 'deg');
 
-                heartsBurst.appendChild(heart);
-                setTimeout(() => heart.classList.add('animate'), 10);
-                setTimeout(() => heart.remove(), 1500);
+                    heartsBurst.appendChild(heart);
+                    setTimeout(() => heart.classList.add('animate'), 10);
+                    setTimeout(() => heart.remove(), 2000);
+                }, i * 30);
+            }
+        }
+
+        function triggerParticles() {
+            const colors = ['#7BC89C', '#A8E6CF', '#FFB6C1', '#FFD700', '#87CEEB', '#DDA0DD'];
+            const rect = polaroidFrame.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = centerX + 'px';
+                particle.style.top = centerY + 'px';
+                particle.style.width = (4 + Math.random() * 8) + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 50 + Math.random() * 100;
+                particle.style.setProperty('--px', Math.cos(angle) * distance + 'px');
+                particle.style.setProperty('--py', Math.sin(angle) * distance + 'px');
+
+                particleContainer.appendChild(particle);
+                setTimeout(() => particle.classList.add('animate'), 10);
+                setTimeout(() => particle.remove(), 1200);
             }
         }
 
         function triggerConfetti() {
-            const colors = ['#7BC89C', '#A8E6CF', '#FFD700', '#FF69B4', '#87CEEB', '#DDA0DD'];
+            const colors = ['#7BC89C', '#A8E6CF', '#FFD700', '#FF69B4', '#87CEEB', '#DDA0DD', '#98FB98'];
+            const shapes = ['circle', 'square', 'triangle'];
             
-            for (let i = 0; i < 50; i++) {
+            for (let i = 0; i < 60; i++) {
                 const confetti = document.createElement('div');
                 confetti.className = 'confetti';
                 confetti.style.left = Math.random() * 100 + '%';
                 confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
-                confetti.style.width = (6 + Math.random() * 8) + 'px';
-                confetti.style.height = (6 + Math.random() * 8) + 'px';
-                confetti.style.animationDelay = Math.random() * 1 + 's';
-                confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+                
+                const size = 6 + Math.random() * 10;
+                confetti.style.width = size + 'px';
+                confetti.style.height = size + 'px';
+                
+                const shape = shapes[Math.floor(Math.random() * shapes.length)];
+                if (shape === 'circle') {
+                    confetti.style.borderRadius = '50%';
+                } else if (shape === 'triangle') {
+                    confetti.style.width = '0';
+                    confetti.style.height = '0';
+                    confetti.style.borderLeft = size/2 + 'px solid transparent';
+                    confetti.style.borderRight = size/2 + 'px solid transparent';
+                    confetti.style.borderBottom = size + 'px solid ' + colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.background = 'transparent';
+                }
+                
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.animationDuration = (3 + Math.random() * 2) + 's';
                 
                 confettiContainer.appendChild(confetti);
                 setTimeout(() => confetti.classList.add('fall'), 10);
-                setTimeout(() => confetti.remove(), 4000);
+                setTimeout(() => confetti.remove(), 6000);
             }
         }
 
         function createSparkles() {
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < 8; i++) {
                 setTimeout(() => {
                     const sparkle = document.createElement('div');
                     sparkle.className = 'sparkle';
                     sparkle.style.left = Math.random() * 100 + '%';
                     sparkle.style.top = Math.random() * 100 + '%';
                     sparkle.style.animationDelay = Math.random() * 1 + 's';
+                    sparkle.style.width = (4 + Math.random() * 6) + 'px';
+                    sparkle.style.height = sparkle.style.width;
                     sparkleContainer.appendChild(sparkle);
-                    setTimeout(() => sparkle.remove(), 3000);
-                }, i * 150);
+                    setTimeout(() => sparkle.remove(), 3500);
+                }, i * 200);
             }
         }
 
         function showEmptyState() {
             loadingSpinner.classList.add('hidden');
+            mediaContainer.style.minHeight = '300px';
             mediaContainer.innerHTML = `
                 <div class="empty-state">
                     <div class="icon">📷</div>
                     <h3>No memories yet!</h3>
-                    <p>Add your photos and videos to the<br><strong>memories</strong> folder and list them<br>in the mediaFiles array.</p>
+                    <p>Add your photos and videos to the<br><strong>memories</strong> folder.</p>
                 </div>
             `;
             totalNum.textContent = '0';
@@ -1097,27 +1639,29 @@
         }
 
         // Touch/Swipe handling
+        let touchStartY = 0;
+        
         mediaContainer.addEventListener('touchstart', (e) => {
             touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
         }, { passive: true });
 
         mediaContainer.addEventListener('touchend', (e) => {
             touchEndX = e.changedTouches[0].clientX;
-            handleSwipe();
-        }, { passive: true });
-
-        function handleSwipe() {
-            const diff = touchStartX - touchEndX;
-            const threshold = 50;
-
-            if (Math.abs(diff) > threshold) {
-                if (diff > 0) {
+            const touchEndY = e.changedTouches[0].clientY;
+            
+            const diffX = touchStartX - touchEndX;
+            const diffY = touchStartY - touchEndY;
+            
+            // Only trigger swipe if horizontal movement is greater than vertical
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                if (diffX > 0) {
                     nextMedia();
                 } else {
                     prevMedia();
                 }
             }
-        }
+        }, { passive: true });
 
         // Keyboard navigation
         document.addEventListener('keydown', (e) => {
@@ -1132,16 +1676,31 @@
                 localStorage.setItem('musicPlaying', 'true');
             }
 
-            // Pause any playing videos
             const videos = document.querySelectorAll('video');
             videos.forEach(v => v.pause());
 
             document.body.style.opacity = '0';
-            document.body.style.transition = 'opacity 0.3s';
+            document.body.style.transition = 'opacity 0.4s ease-out';
             setTimeout(() => {
                 window.location.href = 'next-page.html';
-            }, 300);
+            }, 400);
         }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const currentMedia = mediaContainer.querySelector('.media-item');
+            if (currentMedia) {
+                let aspectRatio;
+                if (currentMedia.tagName === 'IMG') {
+                    aspectRatio = currentMedia.naturalWidth / currentMedia.naturalHeight;
+                } else {
+                    aspectRatio = (currentMedia.videoWidth || 16) / (currentMedia.videoHeight || 9);
+                }
+                if (aspectRatio && !isNaN(aspectRatio)) {
+                    updatePolaroidSize(aspectRatio);
+                }
+            }
+        });
     </script>
 </body>
 </html>

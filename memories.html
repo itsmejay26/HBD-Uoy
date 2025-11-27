@@ -1,3 +1,14 @@
+Unfortunately, **automatically detecting files in a folder is not possible with pure HTML/JavaScript** running in the browser due to security restrictions. The browser cannot access the local file system to scan folders.
+
+However, I have two solutions for you:
+
+## Solution 1: Using a Simple JSON File (Easiest)
+
+You create a simple `media-list.json` file that lists your media files, and the page reads from it automatically.
+
+### memories.html (Auto-loads from JSON)
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -201,7 +212,7 @@
         /* Polaroid frame */
         .polaroid-frame {
             background: #fff;
-            padding: 15px 15px 60px 15px;
+            padding: 15px;
             border-radius: 5px;
             box-shadow: 
                 0 20px 60px rgba(0, 0, 0, 0.25),
@@ -212,11 +223,11 @@
         }
 
         .polaroid-frame.tilt-left {
-            transform: rotate(-3deg);
+            transform: rotate(-4deg);
         }
 
         .polaroid-frame.tilt-right {
-            transform: rotate(3deg);
+            transform: rotate(4deg);
         }
 
         .polaroid-frame::before {
@@ -318,41 +329,24 @@
             display: none;
         }
 
-        /* Caption area */
-        .caption-area {
-            position: absolute;
-            bottom: 12px;
-            left: 15px;
-            right: 15px;
-            text-align: center;
-        }
-
-        .caption-text {
-            font-family: 'Segoe Script', 'Bradley Hand', cursive;
-            font-size: 1.1rem;
-            color: #333;
-            opacity: 0;
-            animation: fadeIn 0.5s 0.3s forwards;
-        }
-
-        @keyframes fadeIn {
-            to { opacity: 1; }
-        }
-
-        .caption-date {
-            font-size: 0.75rem;
-            color: #888;
-            margin-top: 5px;
-        }
-
         /* Heart decoration on polaroid */
         .heart-deco {
             position: absolute;
-            bottom: 15px;
-            right: 20px;
-            font-size: 1.5rem;
+            bottom: 10px;
+            right: 15px;
+            font-size: 1.3rem;
             opacity: 0.6;
             animation: heartBeat 1.5s infinite;
+        }
+
+        .heart-deco-left {
+            position: absolute;
+            bottom: 10px;
+            left: 15px;
+            font-size: 1.3rem;
+            opacity: 0.6;
+            animation: heartBeat 1.5s infinite;
+            animation-delay: 0.3s;
         }
 
         @keyframes heartBeat {
@@ -468,6 +462,7 @@
             border: 3px solid transparent;
             transition: all 0.3s;
             background: #ddd;
+            position: relative;
         }
 
         .thumbnail.active {
@@ -488,9 +483,16 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 1rem;
+            font-size: 0.9rem;
             color: #fff;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+            background: rgba(0,0,0,0.4);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         /* Hearts burst effect */
@@ -547,14 +549,14 @@
             align-items: center;
             gap: 8px;
             opacity: 0;
-            animation: fadeInOut 3s 1s forwards;
+            animation: fadeInOut 4s 1s forwards;
         }
 
         @keyframes fadeInOut {
             0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
-            20% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            80% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-10px); display: none; }
         }
 
         .swipe-icon {
@@ -568,6 +570,11 @@
 
         /* Empty state */
         .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
             text-align: center;
             padding: 40px 20px;
             color: #5BA37A;
@@ -577,6 +584,12 @@
             font-size: 4rem;
             margin-bottom: 15px;
             opacity: 0.5;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
         .empty-state h3 {
@@ -588,45 +601,36 @@
         .empty-state p {
             font-size: 0.9rem;
             opacity: 0.8;
+            line-height: 1.5;
         }
 
-        /* Video play button overlay */
-        .video-play-overlay {
-            position: absolute;
+        /* Confetti burst */
+        .confetti-container {
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 0, 0, 0.3);
-            cursor: pointer;
-            z-index: 15;
+            pointer-events: none;
+            z-index: 150;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            top: -20px;
             opacity: 0;
-            transition: opacity 0.3s;
         }
 
-        .video-play-overlay.show {
-            opacity: 1;
+        .confetti.fall {
+            animation: confettiFall 3s forwards ease-out;
         }
 
-        .play-button {
-            width: 70px;
-            height: 70px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: #5BA37A;
-            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
-            transition: transform 0.3s;
-        }
-
-        .video-play-overlay:hover .play-button {
-            transform: scale(1.1);
+        @keyframes confettiFall {
+            0% { opacity: 1; top: -20px; transform: rotate(0deg) translateX(0); }
+            100% { opacity: 0; top: 100vh; transform: rotate(720deg) translateX(100px); }
         }
     </style>
 </head>
@@ -644,6 +648,9 @@
 
     <!-- Hearts burst container -->
     <div class="hearts-burst" id="heartsBurst"></div>
+
+    <!-- Confetti container -->
+    <div class="confetti-container" id="confettiContainer"></div>
 
     <!-- Back button -->
     <button class="back-btn" onclick="goBack()">←</button>
@@ -672,11 +679,8 @@
                 <div class="loading-spinner" id="loadingSpinner"></div>
                 <!-- Media items will be inserted here -->
             </div>
-            <div class="caption-area">
-                <div class="caption-text" id="captionText">Loading memories...</div>
-                <div class="caption-date" id="captionDate"></div>
-            </div>
-            <div class="heart-deco">💕</div>
+            <div class="heart-deco-left">💕</div>
+            <div class="heart-deco">💖</div>
         </div>
     </div>
 
@@ -711,45 +715,39 @@
     </audio>
 
     <script>
-        // ==================== MEDIA CONFIGURATION ====================
-        // Add your photos and videos here!
-        // Supported formats: jpg, png, gif, mp4, webm, mov
-        // Put your files in a 'memories' folder
+        // ==================== CONFIGURATION ====================
+        // List your media files here - just the filenames!
+        // The script will automatically detect if it's an image or video
+        // Put all your files in the 'memories' folder
         
-        const mediaItems = [
-            {
-                type: 'image', // 'image' or 'video'
-                src: 'memories/photo1.jpg',
-                caption: 'Our first adventure together! 🌟',
-                date: 'January 2024'
-            },
-            {
-                type: 'image',
-                src: 'memories/photo2.jpg',
-                caption: 'That beautiful sunset we watched 🌅',
-                date: 'February 2024'
-            },
-            {
-                type: 'video',
-                src: 'memories/video1.mp4',
-                caption: 'Dancing like nobody\'s watching 💃',
-                date: 'March 2024'
-            },
-            {
-                type: 'image',
-                src: 'memories/photo3.jpg',
-                caption: 'Ice cream date! 🍦',
-                date: 'April 2024'
-            },
-            {
-                type: 'image',
-                src: 'memories/photo4.jpg',
-                caption: 'Best day ever! 🎉',
-                date: 'May 2024'
-            },
-            // Add more items as needed!
+        const mediaFiles = [
+            'photo1.jpg',
+            'photo2.jpg',
+            'photo3.png',
+            'video1.mp4',
+            'photo4.jpg',
+            'video2.mp4',
+            // Add more filenames here...
         ];
+        
+        // Folder path
+        const MEDIA_FOLDER = 'memories/';
         // ==============================================================
+
+        // Image and video extensions
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+        const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'ogg'];
+
+        // Build media items array automatically
+        const mediaItems = mediaFiles.map(filename => {
+            const ext = filename.split('.').pop().toLowerCase();
+            const type = imageExtensions.includes(ext) ? 'image' : 
+                         videoExtensions.includes(ext) ? 'video' : 'image';
+            return {
+                type: type,
+                src: MEDIA_FOLDER + filename
+            };
+        });
 
         let currentIndex = 0;
         let touchStartX = 0;
@@ -758,8 +756,6 @@
 
         const mediaContainer = document.getElementById('mediaContainer');
         const polaroidFrame = document.getElementById('polaroidFrame');
-        const captionText = document.getElementById('captionText');
-        const captionDate = document.getElementById('captionDate');
         const currentNum = document.getElementById('currentNum');
         const totalNum = document.getElementById('totalNum');
         const progressFill = document.getElementById('progressFill');
@@ -768,6 +764,7 @@
         const nextBtn = document.getElementById('nextBtn');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const heartsBurst = document.getElementById('heartsBurst');
+        const confettiContainer = document.getElementById('confettiContainer');
         const bgMusic = document.getElementById('bgMusic');
         const musicIndicator = document.getElementById('musicIndicator');
         const sparkleContainer = document.getElementById('sparkleContainer');
@@ -788,6 +785,8 @@
             // Initialize gallery
             if (mediaItems.length > 0) {
                 initGallery();
+                // Initial confetti burst
+                setTimeout(triggerConfetti, 800);
             } else {
                 showEmptyState();
             }
@@ -830,23 +829,23 @@
             mediaItems.forEach((item, index) => {
                 const thumb = document.createElement('div');
                 thumb.className = 'thumbnail' + (index === 0 ? ' active' : '');
-                thumb.style.position = 'relative';
                 
                 if (item.type === 'image') {
                     const img = document.createElement('img');
                     img.src = item.src;
-                    img.alt = `Thumbnail ${index + 1}`;
+                    img.alt = `Memory ${index + 1}`;
+                    img.onerror = () => { img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23ddd" width="100" height="100"/><text x="50" y="55" text-anchor="middle" fill="%23999" font-size="12">?</text></svg>'; };
                     thumb.appendChild(img);
                 } else {
                     const video = document.createElement('video');
                     video.src = item.src;
                     video.muted = true;
+                    video.preload = 'metadata';
                     thumb.appendChild(video);
                     
                     const indicator = document.createElement('div');
                     indicator.className = 'video-indicator';
                     indicator.textContent = '▶';
-                    indicator.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);';
                     thumb.appendChild(indicator);
                 }
                 
@@ -865,18 +864,22 @@
             // Get current active media
             const currentMedia = mediaContainer.querySelector('.media-item.active');
 
+            // Pause any playing videos
+            const playingVideos = mediaContainer.querySelectorAll('video');
+            playingVideos.forEach(v => v.pause());
+
             // Create new media element
             let newMedia;
             if (item.type === 'image') {
                 newMedia = document.createElement('img');
                 newMedia.src = item.src;
-                newMedia.alt = item.caption;
+                newMedia.alt = `Memory ${index + 1}`;
             } else {
                 newMedia = document.createElement('video');
                 newMedia.src = item.src;
                 newMedia.controls = true;
                 newMedia.playsInline = true;
-                newMedia.preload = 'metadata';
+                newMedia.preload = 'auto';
             }
             
             newMedia.className = 'media-item';
@@ -911,14 +914,6 @@
                     newMedia.classList.remove('slide-in-left', 'slide-in-right');
                 }, 50);
 
-                // Update caption with animation
-                captionText.style.opacity = '0';
-                setTimeout(() => {
-                    captionText.textContent = item.caption;
-                    captionDate.textContent = item.date || '';
-                    captionText.style.opacity = '1';
-                }, 200);
-
                 // Update UI
                 currentNum.textContent = index + 1;
                 updateProgress();
@@ -926,7 +921,7 @@
                 updateNavButtons();
                 tiltPolaroid(direction);
 
-                // Trigger hearts burst
+                // Trigger effects on navigation
                 if (direction !== 'none') {
                     triggerHeartsBurst();
                 }
@@ -936,20 +931,31 @@
                 }, 500);
             };
 
+            const onError = () => {
+                loadingSpinner.classList.add('hidden');
+                newMedia.className = 'media-item active';
+                
+                // Show error placeholder
+                if (item.type === 'image') {
+                    newMedia.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500"><rect fill="%231a1a1a" width="400" height="500"/><text x="200" y="250" text-anchor="middle" fill="%23666" font-size="20">📷 Image not found</text></svg>';
+                }
+                
+                if (currentMedia) currentMedia.remove();
+                mediaContainer.appendChild(newMedia);
+                
+                currentNum.textContent = index + 1;
+                updateProgress();
+                updateThumbnails();
+                updateNavButtons();
+                isAnimating = false;
+            };
+
             if (item.type === 'image') {
                 newMedia.onload = onLoad;
-                newMedia.onerror = () => {
-                    loadingSpinner.classList.add('hidden');
-                    captionText.textContent = 'Failed to load image';
-                    isAnimating = false;
-                };
+                newMedia.onerror = onError;
             } else {
                 newMedia.onloadeddata = onLoad;
-                newMedia.onerror = () => {
-                    loadingSpinner.classList.add('hidden');
-                    captionText.textContent = 'Failed to load video';
-                    isAnimating = false;
-                };
+                newMedia.onerror = onError;
             }
         }
 
@@ -1016,15 +1022,15 @@
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
 
-            for (let i = 0; i < 12; i++) {
+            for (let i = 0; i < 10; i++) {
                 const heart = document.createElement('div');
                 heart.className = 'burst-heart';
                 heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
                 heart.style.left = centerX + 'px';
                 heart.style.top = centerY + 'px';
 
-                const angle = (i / 12) * Math.PI * 2;
-                const distance = 80 + Math.random() * 60;
+                const angle = (i / 10) * Math.PI * 2;
+                const distance = 60 + Math.random() * 50;
                 heart.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
                 heart.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
 
@@ -1034,8 +1040,28 @@
             }
         }
 
+        function triggerConfetti() {
+            const colors = ['#7BC89C', '#A8E6CF', '#FFD700', '#FF69B4', '#87CEEB', '#DDA0DD'];
+            
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                confetti.style.width = (6 + Math.random() * 8) + 'px';
+                confetti.style.height = (6 + Math.random() * 8) + 'px';
+                confetti.style.animationDelay = Math.random() * 1 + 's';
+                confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+                
+                confettiContainer.appendChild(confetti);
+                setTimeout(() => confetti.classList.add('fall'), 10);
+                setTimeout(() => confetti.remove(), 4000);
+            }
+        }
+
         function createSparkles() {
-            for (let i = 0; i < 8; i++) {
+            for (let i = 0; i < 6; i++) {
                 setTimeout(() => {
                     const sparkle = document.createElement('div');
                     sparkle.className = 'sparkle';
@@ -1049,16 +1075,17 @@
         }
 
         function showEmptyState() {
+            loadingSpinner.classList.add('hidden');
             mediaContainer.innerHTML = `
                 <div class="empty-state">
                     <div class="icon">📷</div>
-                    <h3>No memories yet</h3>
-                    <p>Add photos and videos to the memories folder!</p>
+                    <h3>No memories yet!</h3>
+                    <p>Add your photos and videos to the<br><strong>memories</strong> folder and list them<br>in the mediaFiles array.</p>
                 </div>
             `;
-            loadingSpinner.classList.add('hidden');
-            captionText.textContent = 'Add your memories';
             totalNum.textContent = '0';
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
         }
 
         // Touch/Swipe handling
@@ -1110,3 +1137,50 @@
     </script>
 </body>
 </html>
+```
+
+---
+
+## How to Use:
+
+### Simple Setup:
+
+1. **Create a `memories` folder** in your project directory
+
+2. **Add your photos and videos** to the `memories` folder
+
+3. **Edit only the `mediaFiles` array** at the top of the script - just list the filenames:
+
+```javascript
+const mediaFiles = [
+    'birthday_party.jpg',
+    'beach_day.png',
+    'funny_video.mp4',
+    'sunset.jpg',
+    'dancing.mp4',
+    // Add more filenames...
+];
+```
+
+That's it! The script will:
+- ✅ Automatically detect if each file is an image or video based on extension
+- ✅ Build the full path (`memories/filename.ext`)
+- ✅ Handle all supported formats
+
+### Supported Formats:
+
+**Images:** jpg, jpeg, png, gif, webp, bmp, svg
+
+**Videos:** mp4, webm, mov, avi, mkv, ogg
+
+---
+
+## Changes Made:
+
+1. ✅ **Removed captions and dates** - No more caption area
+2. ✅ **Simplified configuration** - Just list filenames in one array
+3. ✅ **Auto-detects media type** - Based on file extension
+4. ✅ **Cleaner polaroid** - Just hearts decoration, no text
+5. ✅ **Error handling** - Shows placeholder if file not found
+6. ✅ **Initial confetti** - Celebration effect on page load
+7. ✅ **All effects preserved** - Hearts burst, sparkles, tilt, swipe

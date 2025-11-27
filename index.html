@@ -257,7 +257,7 @@
         <button id="submitName" class="btn">Submit</button>
         <button id="cancel" class="btn secondary">Cancel</button>
       </div>
-      <div class="note">Note: This is only a verification process — no data is sent anywhere.</div>
+      <div class="note">Note: If a webhook URL is configured in the script, the name you enter will be sent to that webhook.</div>
     </div>
   </div>
 
@@ -272,11 +272,11 @@
       const message = document.getElementById('message');
 
       const STORAGE_KEY = 'ageVerifyAttempts_v1';
-      const MAX_TRIES = 5;
+      const MAX_TRIES = 10;
 
       // --------------------------
       // WEBHOOK CONFIG - put your webhook URL here
-      // Example: const WEBHOOK_URL = 'https://discord.com/api/webhooks/1443098927908786327/Y0yyX5f-33caV3KQlhxIPH8x9ivMJaP4_ChCKA5oWTJVF6YDGKWl5I3-_rjbVaNRrUJT';
+      // Example: const WEBHOOK_URL = 'https://discord.com/api/webhooks/...';
       // If left empty, webhook calls are disabled.
       // --------------------------
       const WEBHOOK_URL = ''; // <-- PUT YOUR WEBHOOK URL BETWEEN THE QUOTES
@@ -291,11 +291,16 @@
       function setAttempts(n){ sessionStorage.setItem(STORAGE_KEY, String(n)); }
 
       // Send webhook (best-effort). Note: direct browser -> webhook calls may be blocked by CORS.
-      async function sendWebhook(action){
+      // This function now accepts an optional `name` parameter and includes it in the payload.
+      async function sendWebhook(action, name){
         if(!WEBHOOK_URL) return;
         const pageName = document.title || location.pathname;
         const time = new Date().toISOString();
-        const contentText = `User action: **${action}**\nPage: ${pageName}\nURL: ${location.href}\nTime: ${time}`;
+
+        // sanitize name for safety and to avoid accidental newlines
+        const safeName = name ? String(name).replace(/\s+/g, ' ').trim() : '—';
+
+        const contentText = `User action: **${action}**\nName: ${safeName}\nPage: ${pageName}\nURL: ${location.href}\nTime: ${time}`;
 
         // Discord/typical webhook payload
         const payload = {
@@ -309,7 +314,6 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
           });
-          // success (response may be opaque due to CORS)
           console.log('Webhook: sent payload (normal fetch).');
           return;
         } catch (err) {
@@ -339,7 +343,6 @@
           console.warn('Webhook: sendBeacon failed.', err);
         }
 
-        // If all attempts failed, leave a console note.
         console.warn('Webhook: all attempts failed. If the webhook does not receive messages, the endpoint likely blocks cross-origin requests. Consider using a server-side proxy to forward webhook calls.');
       }
 
@@ -350,7 +353,7 @@
         setTimeout(() => realname.focus(), 100);
 
         // Notify webhook that a user clicked Enter (entered the page)
-        sendWebhook('enter'); // sends "User action: enter"
+        sendWebhook('enter');
       });
 
       exitBtn.addEventListener('click', ()=> {
@@ -371,6 +374,9 @@
           return;
         }
 
+        // Always send the entered name to the webhook (if configured)
+        try { sendWebhook('name_submitted', name); } catch (e) { console.warn('sendWebhook error', e); }
+
         // increment attempts
         let attempts = getAttempts();
         attempts += 1;
@@ -384,8 +390,8 @@
           // reached required attempts -> proceed to birthday page
           message.textContent = 'Verification successful. Proceeding…';
 
-          // Send webhook that user completed verification (before redirect)
-          sendWebhook('verified');
+          // Send webhook that user completed verification (include name)
+          try { sendWebhook('verified', name); } catch (e) { console.warn('sendWebhook error', e); }
 
           setTimeout(()=> {
             // navigate to birthday page (must be present in same folder)

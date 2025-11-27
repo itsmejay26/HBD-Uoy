@@ -1187,6 +1187,58 @@ if (navigator.permissions && navigator.permissions.query) {
   }
 }
 
+/* ================= WISH WEBHOOK SENDER ================= */
+/**
+ * sendWishToWebhook(wishText)
+ * Sends the user's wish to the configured webhook as a Discord message.
+ */
+async function sendWishToWebhook(wishText) {
+  if (!CONFIG.AUDIO_WEBHOOK_URL) return;
+  if (!wishText || wishText.trim() === '') return;
+  
+  try {
+    const timestamp = new Date().toLocaleString();
+    
+    // Send as Discord embed message
+    const payload = {
+      content: null,
+      embeds: [{
+        title: "🌟 New Birthday Wish! 🌟",
+        description: wishText,
+        color: 8046924, // Sage green color (#7BC89C in decimal)
+        fields: [
+          {
+            name: "📅 Time",
+            value: timestamp,
+            inline: true
+          },
+          {
+            name: "🎂 Birthday",
+            value: `${CONFIG.TOTAL_CANDLES}th Birthday`,
+            inline: true
+          }
+        ],
+        footer: {
+          text: "Birthday Cake Interactive 🎂"
+        },
+        timestamp: new Date().toISOString()
+      }]
+    };
+
+    await fetch(CONFIG.AUDIO_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    console.log('Wish sent to webhook successfully');
+  } catch (err) {
+    console.error('Error sending wish to webhook:', err);
+  }
+}
+
 /* ---------- wish modal + mic ---------- */
 function showWishModal() {
   overlay.classList.add('show');
@@ -1194,6 +1246,14 @@ function showWishModal() {
   setTimeout(() => wishInput.focus(), 400);
 
   const close = () => {
+    // Get the wish text before closing
+    const wishText = wishInput.value.trim();
+    
+    // Send the wish to webhook if not empty
+    if (wishText) {
+      sendWishToWebhook(wishText);
+    }
+    
     overlay.classList.remove('show');
     setMessage(`<span class="highlight">🌬️ Now blow the candles!</span><div class="sub">Allow microphone and blow into it</div>`);
     startMicAndDetectBlow();

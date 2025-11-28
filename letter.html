@@ -126,6 +126,81 @@
             height: 5px;
         }
 
+        /* Letter audio indicator */
+        .letter-audio-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.95);
+            padding: 12px 18px;
+            border-radius: 30px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: #2D5A27;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+            z-index: 100;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .letter-audio-indicator:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        }
+
+        .letter-audio-indicator.show {
+            display: flex;
+        }
+
+        .letter-audio-indicator .audio-icon {
+            font-size: 1.2rem;
+            animation: audioIconPulse 1s infinite;
+        }
+
+        @keyframes audioIconPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        .letter-audio-indicator.paused .audio-icon {
+            animation: none;
+        }
+
+        .letter-audio-indicator .audio-waves {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+            height: 20px;
+        }
+
+        .letter-audio-indicator .wave-bar {
+            width: 4px;
+            background: linear-gradient(to top, #7BC89C, #5BA37A);
+            border-radius: 2px;
+            animation: waveBar 0.4s infinite alternate;
+        }
+
+        .letter-audio-indicator .wave-bar:nth-child(1) { height: 8px; animation-delay: 0s; }
+        .letter-audio-indicator .wave-bar:nth-child(2) { height: 14px; animation-delay: 0.1s; }
+        .letter-audio-indicator .wave-bar:nth-child(3) { height: 10px; animation-delay: 0.2s; }
+        .letter-audio-indicator .wave-bar:nth-child(4) { height: 16px; animation-delay: 0.15s; }
+        .letter-audio-indicator .wave-bar:nth-child(5) { height: 12px; animation-delay: 0.25s; }
+
+        @keyframes waveBar {
+            to { height: 20px; }
+        }
+
+        .letter-audio-indicator.paused .wave-bar {
+            animation: none;
+            height: 6px;
+        }
+
+        .letter-audio-indicator .audio-text {
+            font-weight: 600;
+        }
+
         /* ==================== GAME SECTION ==================== */
         .game-section {
             width: 100%;
@@ -999,6 +1074,19 @@
         <span>Music Playing</span>
     </div>
 
+    <!-- Letter audio indicator -->
+    <div class="letter-audio-indicator" id="letterAudioIndicator">
+        <span class="audio-icon">🎙️</span>
+        <div class="audio-waves">
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+        </div>
+        <span class="audio-text">Voice Message</span>
+    </div>
+
     <!-- ==================== GAME SECTION ==================== -->
     <div class="game-section" id="gameSection">
         <div class="game-container">
@@ -1101,9 +1189,13 @@
         <source src="audio/Vienna.mp3" type="audio/mpeg">
     </audio>
 
+    <!-- Letter audio player -->
+    <audio id="letterAudio"></audio>
+
     <script>
         // ==================== LETTERS DATA ====================
         // You can add or remove letters here!
+        // Add 'audioFile' property with the filename (located in 'audio' folder)
         const letters = [
             {
                 seal: "💝",
@@ -1111,9 +1203,9 @@
                 body: `
                     <p>Happy Birthday te, I want to say thankyou coz you understand me, even though di pa tayo ganon mag kakilala, but for me parang ang tagal nanating magkakilala HAHAHA pero sana mas makilala pa kita. I'm grateful to met u of course, and you're not ashamed to vent out to me and if you have a problems or struggle don't be shy to rants pa rin samin or sakin I'm just here if wala kang malalapitan. Support ako if ano yung mga gusto mo sa buhay kung ano yung pathway ng life mo someday, if you know for yourself that your decision is right, go lang, I also know that you will achieve what you wish for. May mga kaya ka pang di mo pa nakikita sa sarili mo, try to explore it, and I hope a lot more opportunities will happen to you for goods in your life, don't pressure yourself, I believe you can do it someday. love u te so much</p>
                     `,
-                
                 signature: "Feyttt💕",
-                decoration: "🎂 🎈 🎁 🎉 🎊 🌸 💐"
+                decoration: "🎂 🎈 🎁 🎉 🎊 🌸 💐",
+                audioFile: "letter1.mp3"  // Audio file for this letter (put in audio folder)
             },
             
             {
@@ -1122,11 +1214,20 @@
                 body: `
                     <p>hii uoy, happy birthday!. ano akala mo nakalimutan ko? syempre hindi HAHAHHHAHAHHAHAHS lagi mo ba naman pinapaalala eh HAHS. Yung kagabi prank lang yun HAHAHHA kasama yun sa plano. Siguro hindi mo inexpect toh noh. Eto yung magandang surprise yung unexpected. Pangit naman kung expected mona na may website ako ginawa edi wala nang thrill pag ganun HAHS. Btw Happy birthday uoy, sana hindi ka magbago samin nila feyt. Ginawa mo kaming kaibigan kaya panindigan mo yan HAHAHAAHA. Enjoyin mo lang muna ang buhay habang teenager pa kasi last teenager mo na this birthday mo. Gawin mong masaya yung last teenage year mo kasi pag 20 kana hindi kana teen, matanda kana d jk HAHAHAHHAHAHHAHHA. Bawal mang cutoff sa cof nato. Tsaka kung may mga bagay na hindi sinasabi samin, di mo naman kailagan itago yun samin, hindi naman kami judgemental HAHS totoo yan. Dami mong di sinasabi samin eh, pero di ka naman naming pipilitin if ayaw mo, basta tandan mo lang mapapagkatiwalaan mo kami, Lalo na ako di man halata, totoo yan ha akala mo kasi lagi ka niloloko eh HAHS pero sa totoo lang sobrang bait ko talaga. Yun lang Happyyyyy Birthdayyyyyy sana napasaya ka naming ni feyt sa website nato hehe. Yun langgg more birthday to come!</p>
                     `,
-                
                 signature: "Jayyy 💗",
-                decoration: "🎂 🍰 🎁 💝 🌺 🎊 💖"
+                decoration: "🎂 🍰 🎁 💝 🌺 🎊 💖",
+                audioFile: "letter2.mp3"  // Audio file for this letter (put in audio folder)
             }
             // Add more letters here following the same format!
+            // Example:
+            // {
+            //     seal: "💖",
+            //     greeting: "Dear Friend,",
+            //     body: `<p>Your message here...</p>`,
+            //     signature: "Someone 💕",
+            //     decoration: "🎂 🎈 🎁",
+            //     audioFile: "letter3.mp3"  // or leave empty "" if no audio
+            // }
         ];
 
         // ==================== VARIABLES ====================
@@ -1141,6 +1242,8 @@
 
         const bgMusic = document.getElementById('bgMusic');
         const musicIndicator = document.getElementById('musicIndicator');
+        const letterAudio = document.getElementById('letterAudio');
+        const letterAudioIndicator = document.getElementById('letterAudioIndicator');
 
         // ==================== INITIALIZATION ====================
         window.addEventListener('load', () => {
@@ -1160,6 +1263,9 @@
             
             // Create letter dots
             createLetterDots();
+
+            // Setup letter audio indicator click handler
+            letterAudioIndicator.addEventListener('click', toggleLetterAudio);
         });
 
         // Music indicator click
@@ -1181,6 +1287,66 @@
                 localStorage.setItem('musicTime', bgMusic.currentTime);
             }
         }, 1000);
+
+        // ==================== LETTER AUDIO FUNCTIONS ====================
+        function playLetterAudio(index) {
+            // Stop any currently playing letter audio
+            stopLetterAudio();
+
+            const letter = letters[index];
+            
+            // Check if this letter has an audio file
+            if (letter.audioFile && letter.audioFile.trim() !== '') {
+                const audioPath = 'audio/' + letter.audioFile;
+                
+                letterAudio.src = audioPath;
+                
+                // Show the indicator
+                letterAudioIndicator.classList.add('show');
+                letterAudioIndicator.classList.remove('paused');
+                
+                // Play the audio
+                letterAudio.play().then(() => {
+                    console.log('Playing letter audio:', audioPath);
+                }).catch((err) => {
+                    console.warn('Failed to play letter audio:', err);
+                    letterAudioIndicator.classList.add('paused');
+                });
+
+                // Handle audio end
+                letterAudio.onended = () => {
+                    letterAudioIndicator.classList.add('paused');
+                };
+
+                // Handle audio error
+                letterAudio.onerror = () => {
+                    console.warn('Letter audio file not found:', audioPath);
+                    letterAudioIndicator.classList.remove('show');
+                };
+            } else {
+                // No audio for this letter
+                letterAudioIndicator.classList.remove('show');
+            }
+        }
+
+        function stopLetterAudio() {
+            if (letterAudio) {
+                letterAudio.pause();
+                letterAudio.currentTime = 0;
+                letterAudioIndicator.classList.add('paused');
+            }
+        }
+
+        function toggleLetterAudio() {
+            if (letterAudio.paused) {
+                letterAudio.play().then(() => {
+                    letterAudioIndicator.classList.remove('paused');
+                }).catch(() => {});
+            } else {
+                letterAudio.pause();
+                letterAudioIndicator.classList.add('paused');
+            }
+        }
 
         // ==================== GAME FUNCTIONS ====================
         function initGame() {
@@ -1420,10 +1586,16 @@
             
             // Show/hide completion message
             document.getElementById('completionMessage').classList.toggle('show', index === letters.length - 1);
+
+            // Play the audio for this letter
+            playLetterAudio(index);
         }
 
         function nextLetter() {
             if (currentLetterIndex < letters.length - 1) {
+                // Stop current audio before transitioning
+                stopLetterAudio();
+                
                 const wrapper = document.getElementById('letterContentWrapper');
                 wrapper.classList.add('slide-out-left');
                 
@@ -1448,6 +1620,9 @@
 
         function prevLetter() {
             if (currentLetterIndex > 0) {
+                // Stop current audio before transitioning
+                stopLetterAudio();
+                
                 const wrapper = document.getElementById('letterContentWrapper');
                 wrapper.classList.add('slide-out-right');
                 
@@ -1469,6 +1644,9 @@
 
         function goToLetter(index) {
             if (index === currentLetterIndex) return;
+            
+            // Stop current audio before transitioning
+            stopLetterAudio();
             
             const wrapper = document.getElementById('letterContentWrapper');
             const direction = index > currentLetterIndex ? 'left' : 'right';
@@ -1530,6 +1708,10 @@
                 localStorage.setItem('musicPlaying', 'true');
             }
             
+            // Stop letter audio
+            stopLetterAudio();
+            letterAudioIndicator.classList.remove('show');
+            
             // Clear hearts interval
             if (heartsInterval) clearInterval(heartsInterval);
             
@@ -1541,7 +1723,20 @@
                 window.location.href = 'next-page.html';
             }, 300);
         }
+
+        // Stop audio when page is closed or navigated away
+        window.addEventListener('beforeunload', () => {
+            stopLetterAudio();
+        });
+
+        // Stop audio when page visibility changes (tab switch, minimize)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                // Optionally pause audio when tab is not visible
+                // Uncomment the line below if you want audio to pause when switching tabs
+                // letterAudio.pause();
+            }
+        });
     </script>
 </body>
-
 </html>
